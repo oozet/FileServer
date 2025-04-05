@@ -64,28 +64,28 @@ public class AccountController : Controller
 
     
 
-    private JwtSecurityToken GenerateJwtToken(IdentityUser user)
-    {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("your_secret_key"));
+    // private JwtSecurityToken GenerateJwtToken(IdentityUser user)
+    // {
+    //     var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("your_secret_key"));
 
-        var claims = new List<Claim>
-    {
-        new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-        new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-        new Claim(ClaimTypes.Name, user.UserName!),
-        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-    };
+    //     var claims = new List<Claim>
+    // {
+    //     new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+    //     new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+    //     new Claim(ClaimTypes.Name, user.UserName!),
+    //     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+    // };
 
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+    //     var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        return new JwtSecurityToken(
-            issuer: "yourIssuer",
-            audience: "yourAudience",
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(1), // Token valid for 1 hour
-            signingCredentials: credentials
-        );
-    }
+    //     return new JwtSecurityToken(
+    //         issuer: "yourIssuer",
+    //         audience: "yourAudience",
+    //         claims: claims,
+    //         expires: DateTime.UtcNow.AddHours(1), // Token valid for 1 hour
+    //         signingCredentials: credentials
+    //     );
+    // }
 }
 
 // public string GenerateAccessToken(IEnumerable<Claim> claims)

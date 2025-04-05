@@ -51,6 +51,7 @@ builder.Services.AddAuthentication(options =>
     );
 
 builder.Services.AddControllers();
+builder.Services.AddScoped<TokenService>();
 
 var app = builder.Build();
 
