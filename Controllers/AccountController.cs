@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 
-public class AccountController : Controller
+public class AccountController : ControllerBase
 {
     private readonly UserManager<IdentityUser> _userManager;
     private readonly SignInManager<IdentityUser> _signInManager;
@@ -34,25 +34,53 @@ public class AccountController : Controller
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginDto loginData)
+    public async Task<IActionResult> Login([FromBody] LoginDto model)
     {
-        if (!ModelState.IsValid)
-            return BadRequest("Invalid login attempt.");
-
-        var user = await _userManager.FindByNameAsync(loginData.UserName) ?? await _userManager.FindByEmailAsync(loginData.UserName);
-
+            try
+    {
+        var user = await _userManager.FindByNameAsync(model.UserName);
         if (user == null)
-            return Unauthorized("Invalid credentials.");
+        {
+            return BadRequest("User with this username is not registered with us.");
+        }
+        bool isValidPassword = await _userManager.CheckPasswordAsync(user, model.Password);
+        if (isValidPassword == false)
+        {
+            return Unauthorized();
+        }
+            
+        // creating the necessary claims
+        List<Claim> authClaims = [
+                new (ClaimTypes.Name, user.UserName!),
+                new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), 
+                // unique id for token
+        ];
 
-        var result = await _signInManager.PasswordSignInAsync(user, loginData.Password, isPersistent: false, lockoutOnFailure: false);
+        var userRoles = await _userManager.GetRolesAsync(user);
+       
+        // adding roles to the claims. So that we can get the user role from the token.
+        foreach (var userRole in userRoles)
+        {
+            authClaims.Add(new Claim(ClaimTypes.Role, userRole));
+        }
 
-        if (!result.Succeeded)
-            return Unauthorized("Invalid credentials.");
-        var userClaims = await _userManager.GetClaimsAsync(user);
-        var token = _tokenService.GenerateAccessToken(userClaims);
-        var userToken = new TokenDto { AccessToken = token, RefreshToken = "" };
-        // return access token for user's use
-        return Ok(userToken);
+        // generating access token
+        var token = _tokenService.GenerateAccessToken(authClaims);
+
+        //save refreshToken with exp date in the database
+        var refreshToken = await _tokenService.SaveTokenAsync(user.UserName!);
+
+        return Ok(new TokenDto
+        {
+            AccessToken = token,
+            RefreshToken = refreshToken
+        });
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("_logger.LogError(ex.Message):" + ex.ToString());
+        return Unauthorized();
+    }
     }
     
     [Authorize]
@@ -63,6 +91,14 @@ public class AccountController : Controller
     }
 
     
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<IActionResult> LogoutAsync()
+    {
+        Response.Cookies.Delete("access_token");
+        await _tokenService.RevokeAsync(User.Identity.Name);
+        return Ok("Logged out");
+    }
 
     // private JwtSecurityToken GenerateJwtToken(IdentityUser user)
     // {
@@ -110,3 +146,28 @@ public class AccountController : Controller
 
 //     return tokenHandler.WriteToken(token);
 // }
+
+
+
+    // [HttpPost("login")]
+    // public async Task<IActionResult> Login([FromBody] LoginDto loginData)
+    // {
+    //     if (!ModelState.IsValid)
+    //         return BadRequest("Invalid login attempt.");
+
+    //     var user = await _userManager.FindByNameAsync(loginData.UserName) ?? await _userManager.FindByEmailAsync(loginData.UserName);
+
+    //     if (user == null)
+    //         return Unauthorized("Invalid credentials.");
+
+    //     var result = await _signInManager.PasswordSignInAsync(user, loginData.Password, isPersistent: false, lockoutOnFailure: false);
+
+    //     if (!result.Succeeded)
+    //         return Unauthorized("Invalid credentials.");
+    //     var userClaims = await _userManager.GetClaimsAsync(user);
+    //     var token = _tokenService.GenerateAccessToken(userClaims);
+    //     var refreshToke = _tokenService.GenerateRefreshToken();
+    //     var userToken = new TokenDto { AccessToken = token, RefreshToken = refreshToke };
+    //     // return access token for user's use
+    //     return Ok(userToken);
+    // }

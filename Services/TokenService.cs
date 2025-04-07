@@ -2,10 +2,14 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 public interface ITokenService
 {
+    Task<string> SaveTokenAsync(string username);
+    Task<bool> RevokeAsync(string username);
     string GenerateAccessToken(IEnumerable<Claim> claims);
     string GenerateRefreshToken();
     ClaimsPrincipal GetPrincipalFromExpiredToken(string accessToken);
@@ -14,33 +18,98 @@ public interface ITokenService
 public class TokenService : ITokenService
 {
     private readonly IConfiguration _configuration;
-    public TokenService(IConfiguration configuration)
+    private readonly AppDbContext _context;
+    private readonly ILogger<TokenService> _logger;
+
+    public TokenService(IConfiguration configuration, AppDbContext context, ILogger<TokenService> logger)
     {
         _configuration = configuration;
+        _context = context;
+        _logger = logger;
     }
 
-    public string GenerateAccessToken(IEnumerable<Claim> claims)
-{
-    var tokenHandler = new JwtSecurityTokenHandler();
-
-    // Create a symmetric security key using the secret key from the configuration.
-    var authSigningKey = new SymmetricSecurityKey
-                    (Encoding.UTF8.GetBytes(_configuration["JWT:Secret"] ?? throw new InvalidOperationException("JWT:Secret missing in TokenService")));
-
-    var tokenDescriptor = new SecurityTokenDescriptor
+    public async Task<string> SaveTokenAsync(string username)
     {
-        Issuer = _configuration["JWT:ValidIssuer"],
-        Audience = _configuration["JWT:ValidAudience"],
-        Subject = new ClaimsIdentity(claims),
-        Expires = DateTime.Now.AddMinutes(15),
-        SigningCredentials = new SigningCredentials
-                      (authSigningKey, SecurityAlgorithms.HmacSha256)
-    };
 
-    var token = tokenHandler.CreateToken(tokenDescriptor);
+        try
+        {
+            string refreshToken = GenerateRefreshToken();
+            var tokenInfo = await _context.TokenInfo.FirstOrDefaultAsync(a => a.UserName == username);
+    
+            // If tokenInfo is null for the user, create a new one
+            if (tokenInfo == null)
+            {
+                var ti = new Token
+                {
+                    UserName = username,
+                    RefreshToken = refreshToken,
+                    ExpiredAt = DateTime.UtcNow.AddDays(7)
+                };
+                await _context.TokenInfo.AddAsync(ti);
+            }
+            // Else, update the refresh token and expiration
+            else
+            {
+                tokenInfo.RefreshToken = refreshToken;
+                tokenInfo.ExpiredAt = DateTime.UtcNow.AddDays(7);
+            }
+    
+            await _context.SaveChangesAsync();
+    
+            return tokenInfo!.RefreshToken;
+        }
+        catch (System.Exception ex)
+        {
+            
+            Console.WriteLine(ex.ToString());
+            return "Bad request";
+        }
+    }
 
-    return tokenHandler.WriteToken(token);
+    public async Task<bool> RevokeAsync(string username)
+{
+    try
+    {
+        var user = _context.TokenInfo.SingleOrDefault(u => u.UserName == username);
+        if (user == null)
+        {
+            throw new ArgumentNullException(nameof(username),"Token with that username missing from database.");
+        }
+            Console.WriteLine(user.RefreshToken);
+        user.RefreshToken = string.Empty;
+        await _context.SaveChangesAsync();
+
+        return true;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex.Message);
+        return false;
+    }
 }
+
+    public string GenerateAccessToken(IEnumerable<Claim> claims)
+    {
+        var tokenHandler = new JwtSecurityTokenHandler();
+
+        // Create a symmetric security key using the secret key from the configuration.
+        var authSigningKey = new SymmetricSecurityKey
+                        (Encoding.UTF8.GetBytes(_configuration["JWT:Secret"] ?? throw new InvalidOperationException("JWT:Secret missing in TokenService")));
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Issuer = _configuration["JWT:ValidIssuer"],
+            Audience = _configuration["JWT:ValidAudience"],
+            Subject = new ClaimsIdentity(claims),
+            Expires = DateTime.Now.AddMinutes(10),
+            SigningCredentials = new SigningCredentials
+                          (authSigningKey, SecurityAlgorithms.HmacSha256)
+        };
+
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+
+        return tokenHandler.WriteToken(token);
+    }
 
     public string GenerateRefreshToken()
     {
@@ -68,7 +137,7 @@ public class TokenService : ITokenService
             ValidateLifetime = false, 
             ClockSkew = TimeSpan.Zero,
             IssuerSigningKey = new SymmetricSecurityKey
-                  (Encoding.UTF8.GetBytes(_configuration["JWT:secret"]))
+                  (Encoding.UTF8.GetBytes(_configuration["JWT:secret"] ?? throw new InvalidOperationException("Something wrong with getfromexp")))
    };
 
    var tokenHandler = new JwtSecurityTokenHandler();
@@ -76,7 +145,7 @@ public class TokenService : ITokenService
    // Validate the token and extract the claims principal and the security token.
    var principal = tokenHandler.ValidateToken(accessToken, tokenValidationParameters, out SecurityToken securityToken);
 
-        // Cast the security token to a JwtSecurityToken for further validation.
+    // Cast the security token to a JwtSecurityToken for further validation.
    var jwtSecurityToken = securityToken as JwtSecurityToken;
 
    // Ensure the token is a valid JWT and uses the HmacSha256 signing algorithm.
