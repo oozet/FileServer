@@ -6,21 +6,24 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 
-public class AccountController : ControllerBase
+
+[ApiController]
+[Route("auth")]
+public class AuthController : ControllerBase
 {
-    private readonly UserManager<AppUser> _userManager;
+    private readonly IUserService _userService;
     private readonly SignInManager<AppUser> _signInManager;
     private readonly TokenService _tokenService;
-    private readonly ILogger<AccountController> _logger;
+    private readonly ILogger<AuthController> _logger;
 
-    public AccountController(
-        UserManager<AppUser> userManager,
+    public AuthController(
+        IUserService userService,
         SignInManager<AppUser> signInManager,
         TokenService tokenService,
-        ILogger<AccountController> logger
+        ILogger<AuthController> logger
     )
     {
-        _userManager = userManager;
+        _userService = userService;
         _signInManager = signInManager;
         _tokenService = tokenService;
         _logger = logger;
@@ -29,16 +32,16 @@ public class AccountController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register(string username, string email, string password)
     {
-        var user = new AppUser { UserName = username, Email = email };
-        var result = await _userManager.CreateAsync(user, password);
-
-        if (result.Succeeded)
+        try
         {
-            await _userManager.AddToRoleAsync(user, AppRoles.User);
+            await _userService.CreateUserAsync(username, email, password);
+
             return Ok("User created successfully!");
         }
-
-        return BadRequest(result.Errors);
+        catch
+        {
+            return BadRequest("Unable to create user.");
+        }
     }
 
     [HttpPost("login")]
@@ -47,18 +50,7 @@ public class AccountController : ControllerBase
         try
         {
             // Try to login in user
-            var user =
-                await _userManager.FindByNameAsync(model.UserName)
-                ?? await _userManager.FindByEmailAsync(model.UserName);
-            if (user == null)
-            {
-                return BadRequest("User with this username is not registered with us.");
-            }
-            bool isValidPassword = await _userManager.CheckPasswordAsync(user, model.Password);
-            if (isValidPassword == false)
-            {
-                return Unauthorized();
-            }
+            var user = await _userService.LoginUserAsync(model);
 
             // Generate Claims from AppUser
             var authClaims = await GenerateClaimsAsync(user);
@@ -67,7 +59,7 @@ public class AccountController : ControllerBase
             var accessToken = _tokenService.GenerateAccessToken(authClaims);
 
             // Save refreshToken with exp date in the database
-            var refreshToken = await _tokenService.SaveTokenInfoAsync(user.UserName);
+            var refreshToken = await _tokenService.SaveTokenInfoAsync(user.UserName!);
             // Set refresh token in HTTP-only secure cookie
             var cookieOptions = new CookieOptions
             {
@@ -85,16 +77,24 @@ public class AccountController : ControllerBase
                     user = new UserDto
                     {
                         UserId = user.Id,
-                        UserName = user.UserName,
+                        UserName = user.UserName!,
                         Email = user.Email ?? string.Empty,
                     },
                 }
             );
         }
+        catch (NullReferenceException)
+        {
+            return NotFound("User doesn't exist.");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
         catch (Exception ex)
         {
             _logger.LogError("An exception occurred: {Message}", ex.Message);
-            return Unauthorized();
+            return BadRequest();
         }
     }
 

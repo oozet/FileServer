@@ -1,4 +1,4 @@
-public class Token
+public class TokenInfo
 {
     public int Id { get; set; }
 

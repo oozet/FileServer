@@ -19,17 +19,17 @@ public interface ITokenService
 public class TokenService : ITokenService
 {
     private readonly IConfiguration _configuration;
-    private readonly AppDbContext _context;
+    private readonly ITokenRepository _tokenRepository;
     private readonly ILogger<TokenService> _logger;
 
     public TokenService(
         IConfiguration configuration,
-        AppDbContext context,
+        ITokenRepository tokenRepository,
         ILogger<TokenService> logger
     )
     {
         _configuration = configuration;
-        _context = context;
+        _tokenRepository = tokenRepository;
         _logger = logger;
     }
 
@@ -39,29 +39,27 @@ public class TokenService : ITokenService
         {
             string refreshToken = GenerateRefreshToken();
 
-            var tokenInfo = await _context.TokenInfo.FirstOrDefaultAsync(a =>
-                a.UserName == username
-            );
+            var tokenInfo = await _tokenRepository.GetTokenByUsernameAsync(username);
 
             // If tokenInfo is null for the user, create a new one
             if (tokenInfo == null)
             {
-                var ti = new Token
+                var ti = new TokenInfo
                 {
                     UserName = username,
                     RefreshToken = refreshToken,
                     ExpiredAt = DateTime.UtcNow.AddDays(7),
                 };
-                await _context.TokenInfo.AddAsync(ti);
+                await _tokenRepository.AddTokenAsync(ti);
             }
             // Else, update the refresh token and expiration
             else
             {
                 tokenInfo.RefreshToken = refreshToken;
                 tokenInfo.ExpiredAt = DateTime.UtcNow.AddDays(7);
-            }
 
-            await _context.SaveChangesAsync();
+                await _tokenRepository.UpdateTokenAsync(tokenInfo);
+            }
 
             return refreshToken;
         }
@@ -80,8 +78,8 @@ public class TokenService : ITokenService
     {
         try
         {
-            var user = _context.TokenInfo.SingleOrDefault(u => u.UserName == username);
-            if (user == null)
+            var refreshToken = await _tokenRepository.GetTokenByUsernameAsync(username);
+            if (refreshToken == null)
             {
                 throw new ArgumentNullException(
                     nameof(username),
@@ -89,8 +87,7 @@ public class TokenService : ITokenService
                 );
             }
 
-            user.RefreshToken = string.Empty;
-            await _context.SaveChangesAsync();
+            await _tokenRepository.DeleteTokenAsync(username);
 
             return true;
         }
@@ -190,18 +187,29 @@ public class TokenService : ITokenService
 
     public async Task<TokenResult> ValidateRefreshToken(string username, string refreshToken)
     {
-        var tokenInfo = await _context.TokenInfo.SingleOrDefaultAsync(u => u.UserName == username);
-        if (
-            tokenInfo == null
-            || tokenInfo.RefreshToken != refreshToken
-            || tokenInfo.ExpiredAt <= DateTime.UtcNow
-        )
-            return new TokenResult { Success = false, ErrorMessage = "Invalid refreshtoken" };
+        try
+        {
+            var tokenInfo = await _tokenRepository.GetTokenByUsernameAsync(username);
+            if (
+                tokenInfo == null
+                || tokenInfo.RefreshToken != refreshToken
+                || tokenInfo.ExpiredAt <= DateTime.UtcNow
+            )
+            {
+                return new TokenResult { Success = false, ErrorMessage = "Invalid refreshtoken" };
+            }
 
-        var newRefreshToken = GenerateRefreshToken();
-        tokenInfo.RefreshToken = newRefreshToken;
-        await _context.SaveChangesAsync();
+            var newRefreshToken = GenerateRefreshToken();
+            tokenInfo.RefreshToken = newRefreshToken;
 
-        return new TokenResult { Success = true, Token = newRefreshToken };
+            await _tokenRepository.UpdateTokenAsync(tokenInfo);
+
+            return new TokenResult { Success = true, Token = newRefreshToken };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unable to validate refresh token {refreshToken} for user: {Username}", refreshToken, username);
+            return new TokenResult { Success = false, ErrorMessage = "Error while validating refreshtoken" }; ;
+        }
     }
 }

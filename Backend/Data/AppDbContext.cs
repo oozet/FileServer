@@ -9,7 +9,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
         : base(options) { }
 
     //public DbSet<AppUser> Users => Set<AppUser>();
-    public DbSet<Token> TokenInfo => Set<Token>();
+    public DbSet<TokenInfo> TokenStore => Set<TokenInfo>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
