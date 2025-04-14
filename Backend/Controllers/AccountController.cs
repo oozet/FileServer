@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 
-
 [ApiController]
 [Route("auth")]
 public class AuthController : ControllerBase
@@ -50,16 +49,19 @@ public class AuthController : ControllerBase
         try
         {
             // Try to login in user
-            var user = await _userService.LoginUserAsync(model);
+            var appUser =
+                await _userService.ValidateUserAsync(model)
+                ?? throw new Exception("Validation failed without throwing error.");
 
             // Generate Claims from AppUser
-            var authClaims = await GenerateClaimsAsync(user);
+            var authClaims = await _userService.GenerateClaimsAsync(appUser);
 
             // Generating access token
             var accessToken = _tokenService.GenerateAccessToken(authClaims);
 
             // Save refreshToken with exp date in the database
-            var refreshToken = await _tokenService.SaveTokenInfoAsync(user.UserName!);
+            var refreshToken = await _tokenService.SaveTokenInfoAsync(appUser.UserName!);
+
             // Set refresh token in HTTP-only secure cookie
             var cookieOptions = new CookieOptions
             {
@@ -76,9 +78,9 @@ public class AuthController : ControllerBase
                     accessToken = accessToken,
                     user = new UserDto
                     {
-                        UserId = user.Id,
-                        UserName = user.UserName!,
-                        Email = user.Email ?? string.Empty,
+                        UserId = appUser.Id,
+                        UserName = appUser.UserName ?? string.Empty,
+                        Email = appUser.Email ?? string.Empty,
                     },
                 }
             );
@@ -99,41 +101,28 @@ public class AuthController : ControllerBase
     }
 
     [Authorize]
-    [HttpGet("get-user")]
-    public async Task<IActionResult> GetUserAsync()
+    [HttpGet("get-user-info")]
+    public async Task<IActionResult> GetUserInfo()
     {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("User ID not found in token");
+        }
+
         try
         {
-            // Retrieve user info from the HttpContext (e.g., ClaimsPrincipal)
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; // Assuming 'id' is in the claims
-            if (userId == null)
-            {
-                return Unauthorized("User ID not found in token");
-            }
-
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null)
-            {
-                return NotFound("User not found");
-            }
-
-            var userDto = new UserDto
-            {
-                UserId = userId,
-                UserName = user.UserName,
-                Email = user.Email ?? string.Empty,
-            };
-
-            return Ok(user);
+            var userDto = await _userService.GetUserByIdAsync(userId);
+            return Ok(userDto);
         }
-        catch (Exception ex)
+        catch
         {
-            return StatusCode(500, $"An error occurred: {ex.Message}");
+            return BadRequest();
         }
     }
 
-    [HttpPost("token/refresh")]
-    public async Task<IActionResult> Refresh(string accessToken)
+    [HttpPost("refresh-token")]
+    public async Task<IActionResult> RefreshToken(string accessToken)
     {
         try
         {
@@ -146,6 +135,7 @@ public class AuthController : ControllerBase
 
             var principal = _tokenService.GetPrincipalFromExpiredToken(accessToken);
             var username = principal?.Identity?.Name;
+
             var claims = principal?.Claims;
             if (username == null || claims == null)
                 return BadRequest("Invalid refresh token. Please login again.");
@@ -200,74 +190,49 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("request-password")]
-    public async Task<IActionResult> SendPasswordResetToken(
-        [FromBody] ResetPasswordRequestDto model
-    )
+    public async Task<IActionResult> SendPasswordResetToken([FromBody] string email)
     {
-        var user = await _userManager.FindByEmailAsync(model.Email);
-        if (user == null)
-            return BadRequest("User does not exist.");
+        if (!email.Contains('@') || !email.Contains('.'))
+        {
+            return BadRequest("Invalid email adress.");
+        }
+        try
+        {
+            var token = await _userService.GeneratePasswordResetTokenAsync(email);
 
-        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-
-        // Send the token to the user (e.g., via email)
-        //await _emailService.SendPasswordResetEmail(user.Email, token);
-
-        // ------- WARNING ONLY FOR DEVELOPMENT -----------
-        // Return a response with email and token to test functionality because no email service is exists
+            if (token != null)
+            {
+                // Send the token to the user (e.g., via email)
+                //await _emailService.SendPasswordResetEmail(user.Email, token);
 #if DEBUG
-        return Ok(token);
+                return Ok(token);
 #else
-        throw new InvalidOperationException(
-            "This code should not be included in production builds!"
-        );
+                throw new InvalidOperationException(
+                    "This code should not be included in production builds!"
+                );
 #endif
+            }
 
-        //return Ok("Password reset token sent.");
+            return BadRequest("");
+        }
+        catch
+        {
+            return BadRequest("");
+        }
     }
 
     [Authorize]
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPasswordAsync([FromBody] ResetPasswordDto model)
     {
-        var user = await _userManager.FindByEmailAsync(model.Email);
-        if (user == null)
+        try
         {
-            return BadRequest("User does not exist.");
+            await _userService.ResetPasswordAsync(model);
+            return Ok("Password successfully reset.");
         }
-
-        // Reset the password using the provided token
-        var result = await _userManager.ResetPasswordAsync(user, model.Token, model.NewPassword);
-
-        if (!result.Succeeded)
+        catch (NullReferenceException)
         {
-            return BadRequest(result.Errors);
+            return NotFound("User not found in database.");
         }
-
-        return Ok("Password successfully reset.");
-    }
-
-    private async Task<List<Claim>> GenerateClaimsAsync(AppUser user)
-    {
-        // Creating the necessary claims
-        List<Claim> authClaims =
-        [
-            new(
-                ClaimTypes.Name,
-                user.UserName
-                    ?? throw new InvalidOperationException("Critical error: UserName is null")
-            ),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            // unique id for token
-        ];
-
-        var userRoles = await _userManager.GetRolesAsync(user);
-
-        // Adding roles to the claims. So that we can get the user role from the token.
-        foreach (var userRole in userRoles)
-        {
-            authClaims.Add(new Claim(ClaimTypes.Role, userRole));
-        }
-        return authClaims;
     }
 }

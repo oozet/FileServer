@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import { AuthContext } from "./auth-context";
+import { AuthContext } from "../../context/auth-context";
 
 const LogoutButton: React.FC = () => {
 

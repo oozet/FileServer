@@ -1,32 +1,19 @@
-import { useState } from 'react'
 import './App.css'
-import LoginForm from './features/auth/login-form'
-import AuthProvider from './features/auth/auth-context'
-import LogoutButton from './features/auth/logout-button'
+import AuthProvider from './context/auth-context'
+import { Header } from './features/header/header'
+import { Main } from './features/main/main'
+
 
 function App() {
-  const [count, setCount] = useState(0)
 
   return (
     <>
-      <div>
+      <div className="layout">
         <AuthProvider>
-          <LoginForm />
-          <LogoutButton />
+          <Header />
+          <Main />
         </AuthProvider>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
     </>
   )
 }

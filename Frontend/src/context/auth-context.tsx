@@ -13,10 +13,10 @@ const defaultAuthContext: AuthContextType = {
   user: null,
   saveLogin: () => { },
   logout: () => { },
-};
+}
 
 interface User {
-  accessToken: string;
+  id: string;
   name: string;
   email: string;
 }
@@ -44,7 +44,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 
   useEffect(() => {
-    const checkLogin = async () => {
+    const autoLogin = async () => {
       console.log("useEffect called.");
       if (!user) {
         const response = await fetch('http://localhost:5264/get-user', {
@@ -64,7 +64,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
     }
 
-    checkLogin();
+    autoLogin();
   }, []);
 
   return (

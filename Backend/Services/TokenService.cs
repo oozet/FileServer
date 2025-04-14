@@ -208,8 +208,18 @@ public class TokenService : ITokenService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unable to validate refresh token {refreshToken} for user: {Username}", refreshToken, username);
-            return new TokenResult { Success = false, ErrorMessage = "Error while validating refreshtoken" }; ;
+            _logger.LogError(
+                ex,
+                "Unable to validate refresh token {refreshToken} for user: {Username}",
+                refreshToken,
+                username
+            );
+            return new TokenResult
+            {
+                Success = false,
+                ErrorMessage = "Error while validating refreshtoken",
+            };
+            ;
         }
     }
 }
