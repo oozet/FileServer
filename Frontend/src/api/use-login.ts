@@ -45,41 +45,12 @@ export const useLogin = () => {
     return { login, isLoading, error };
 };
 
-useEffect(() => {
-    const autoLogin = async () => {
-        console.log("useEffect called.");
-        if (!user) {
-            const response = await fetch('http://localhost:5264/get-user', {
-                method: 'POST',
-                credentials: 'include', // Include the cookie with the request
-                body: authToken ?? "",
-            });
-            console.log(response);
-            if (!response.ok) {
-                console.log('Refresh token is invalid or expired');
-                return
-            }
-            const data = await response.json();
-            // Save the new access token in React Context or localStorage
-            console.log(data + " trying to refresh.");
-            saveLogin(data.accessToken, data.user);
-        };
-    }
-
-    autoLogin();
-}, []);
-
 export const useTokenLogin = () => {
     const { saveLogin, authToken } = useAuth();
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     const tokenLogin = async () => {
-        setIsLoading(true);
-        setError(null);
 
         try {
-
             const response = await fetch('http://localhost:5264/get-user', {
                 method: 'POST',
                 credentials: 'include', // Include the cookie with the request
@@ -97,12 +68,10 @@ export const useTokenLogin = () => {
             saveLogin(data.accessToken, data.user);
             // return data; // This would typically include your JWT token or session info
         } catch (err: any) {
-            setError(err.message);
+            console.error(err);
             return null;
-        } finally {
-            setIsLoading(false);
         }
     };
 
-    return { tokenLogin, isLoading, error };
+    return { tokenLogin };
 };
