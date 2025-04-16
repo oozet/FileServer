@@ -10,6 +10,7 @@ public interface ITokenService
 {
     Task<string> SaveTokenInfoAsync(string username);
     Task<bool> RevokeAsync(string username);
+    Task<TokenInfo?> GetTokenInfoAsync(string refreshToken);
     Task<TokenResult> ValidateRefreshToken(string username, string refreshToken);
     string GenerateAccessToken(IEnumerable<Claim> claims);
     string GenerateRefreshToken();
@@ -155,7 +156,7 @@ public class TokenService : ITokenService
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(
                     _configuration["JWT:secret"]
-                        ?? throw new InvalidOperationException("Something wrong with getfromexp")
+                        ?? throw new InvalidOperationException("Something wrong with GetPrincipalFromExpiredToken")
                 )
             ),
         };
@@ -183,6 +184,38 @@ public class TokenService : ITokenService
         }
 
         return principal;
+    }
+
+    public async Task<TokenInfo?> GetTokenInfoAsync(string refreshToken)
+    {
+        try
+        {
+            var tokenInfo = await _tokenRepository.GetTokenInfoAsync(refreshToken);
+            if (
+                tokenInfo == null
+                || tokenInfo.RefreshToken != refreshToken
+                || tokenInfo.ExpiredAt <= DateTime.UtcNow
+            )
+            {
+                return null;
+            }
+
+            var newRefreshToken = GenerateRefreshToken();
+            tokenInfo.RefreshToken = newRefreshToken;
+
+            await _tokenRepository.UpdateTokenAsync(tokenInfo);
+
+            return tokenInfo;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Unable to validate refresh token {refreshToken}",
+                refreshToken
+            );
+            return null;
+        }
     }
 
     public async Task<TokenResult> ValidateRefreshToken(string username, string refreshToken)

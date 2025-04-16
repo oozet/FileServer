@@ -110,15 +110,15 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<AppUser> GetUserAsync(string userIdentifier)
+    public async Task<AppUser> GetUserAsync(string userName)
     {
         try
         {
             // Retrieve user from database.
             var user =
                 (
-                    await _userManager.FindByNameAsync(userIdentifier)
-                    ?? await _userManager.FindByEmailAsync(userIdentifier)
+                    await _userManager.FindByNameAsync(userName)
+                    ?? await _userManager.FindByEmailAsync(userName)
                 ) ?? throw new NullReferenceException();
 
             return user;

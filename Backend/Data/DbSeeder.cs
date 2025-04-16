@@ -40,7 +40,7 @@ public class DbSeeder
             // Attempt to create admin user
             var createUserResult = await userManager.CreateAsync(
                 user: user,
-                password: "loggainadminförfileserverprojekt."
+                password: "password"
             );
 
             // Validate user creation

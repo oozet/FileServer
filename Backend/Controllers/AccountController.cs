@@ -12,13 +12,13 @@ public class AuthController : ControllerBase
 {
     private readonly IUserService _userService;
     private readonly SignInManager<AppUser> _signInManager;
-    private readonly TokenService _tokenService;
+    private readonly ITokenService _tokenService;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         IUserService userService,
         SignInManager<AppUser> signInManager,
-        TokenService tokenService,
+        ITokenService tokenService,
         ILogger<AuthController> logger
     )
     {
@@ -61,6 +61,7 @@ public class AuthController : ControllerBase
 
             // Save refreshToken with exp date in the database
             var refreshToken = await _tokenService.SaveTokenInfoAsync(appUser.UserName!);
+            Console.WriteLine("RefreshToken:" + refreshToken);
 
             // Set refresh token in HTTP-only secure cookie
             var cookieOptions = new CookieOptions
@@ -118,6 +119,47 @@ public class AuthController : ControllerBase
         catch
         {
             return BadRequest();
+        }
+    }
+
+    [HttpPost("generate-access-token")]
+    public async Task<IActionResult> GenerateAccessToken()
+    {
+        try
+        {
+            var refreshToken = Request.Cookies["refreshToken"];
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                return BadRequest("Refresh token is missing.");
+            }
+
+            var tokenInfo = await _tokenService.GetTokenInfoAsync(refreshToken);
+            if (tokenInfo == null)
+            {
+                return BadRequest("Invalid refresh token.");
+            }
+
+            var user = await _userService.GetUserAsync(tokenInfo.UserName);
+            var claims = await _userService.GenerateClaimsAsync(user);
+
+            var newAccessToken = _tokenService.GenerateAccessToken(claims);
+
+            // Set refresh token in HTTP-only secure cookie
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true, // HTTPS required
+                SameSite = SameSiteMode.Lax,
+                Expires = DateTime.UtcNow.AddDays(7),
+            };
+            Response.Cookies.Append("refreshToken", tokenInfo.RefreshToken, cookieOptions);
+
+            return Ok(new { newAccessToken });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex.Message, "Unable to generate access token.");
+            return StatusCode(StatusCodes.Status500InternalServerError);
         }
     }
 

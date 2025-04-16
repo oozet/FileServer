@@ -5,6 +5,7 @@ public interface ITokenRepository
     Task AddTokenAsync(TokenInfo token);
     Task UpdateTokenAsync(TokenInfo tokenInfo);
     Task<TokenInfo?> GetTokenByUsernameAsync(string username);
+    Task<TokenInfo?> GetTokenInfoAsync(string refreshToken);
     Task DeleteTokenAsync(string username);
 }
 
@@ -39,6 +40,11 @@ public class TokenRepository : ITokenRepository
     public async Task<TokenInfo?> GetTokenByUsernameAsync(string username)
     {
         return await _context.TokenStore.FirstOrDefaultAsync(t => t.UserName == username);
+    }
+
+    public async Task<TokenInfo?> GetTokenInfoAsync(string refreshToken)
+    {
+        return await _context.TokenStore.FirstOrDefaultAsync(t => t.RefreshToken == refreshToken);
     }
 
     public async Task DeleteTokenAsync(string username)
