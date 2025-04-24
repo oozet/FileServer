@@ -63,6 +63,7 @@ builder
         };
     });
 
+// Cors for frontend and cookies
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(
@@ -81,11 +82,15 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers();
 builder.Services.AddScoped<ITokenRepository, TokenRepository>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IFileRepository, FileRepository>();
+builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddScoped<IDirectoryRepository, DirectoryRepository>();
+builder.Services.AddScoped<IDirectoryService, DirectoryService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
 var app = builder.Build();
 
-// Use dotnet run -- --resetdb to reset the database.
+// Use 'dotnet run -- --resetdb' to reset the database.
 if (app.Environment.IsDevelopment() && args.Contains("--resetdb"))
 {
     using var scope = app.Services.CreateScope();

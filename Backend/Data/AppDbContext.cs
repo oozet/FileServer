@@ -9,7 +9,10 @@ public class AppDbContext : IdentityDbContext<AppUser>
         : base(options) { }
 
     //public DbSet<AppUser> Users => Set<AppUser>();
-    public DbSet<TokenInfo> TokenStore => Set<TokenInfo>();
+
+    public DbSet<TokenInfo> TokenStore { get; set; }
+    public DbSet<FileEntity> Files { get; set; }
+    public DbSet<DirectoryEntity> Directories { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

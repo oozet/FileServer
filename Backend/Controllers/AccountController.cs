@@ -55,6 +55,10 @@ public class AuthController : ControllerBase
 
             // Generate Claims from AppUser
             var authClaims = await _userService.GenerateClaimsAsync(appUser);
+            foreach (var claim in authClaims)
+            {
+                Console.WriteLine(claim);
+            }
 
             // Generating access token
             var accessToken = _tokenService.GenerateAccessToken(authClaims);
@@ -139,8 +143,8 @@ public class AuthController : ControllerBase
                 return BadRequest("Invalid refresh token.");
             }
 
-            var user = await _userService.GetUserAsync(tokenInfo.UserName);
-            var claims = await _userService.GenerateClaimsAsync(user);
+            var appUser = await _userService.GetUserAsync(tokenInfo.UserName);
+            var claims = await _userService.GenerateClaimsAsync(appUser);
 
             var newAccessToken = _tokenService.GenerateAccessToken(claims);
 
@@ -154,7 +158,18 @@ public class AuthController : ControllerBase
             };
             Response.Cookies.Append("refreshToken", tokenInfo.RefreshToken, cookieOptions);
 
-            return Ok(new { newAccessToken });
+            return Ok(
+                new
+                {
+                    accessToken = newAccessToken,
+                    user = new UserDto
+                    {
+                        UserId = appUser.Id,
+                        UserName = appUser.UserName ?? string.Empty,
+                        Email = appUser.Email ?? string.Empty,
+                    },
+                }
+            );
         }
         catch (Exception ex)
         {

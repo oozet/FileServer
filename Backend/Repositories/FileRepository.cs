@@ -1,26 +1,22 @@
 using Microsoft.EntityFrameworkCore;
 
-public interface ITokenRepository
+public interface IFileRepository
 {
-    Task AddTokenAsync(TokenInfo entity);
-    Task UpdateTokenAsync(TokenInfo tokenInfo);
-    Task<TokenInfo?> GetTokenByUsernameAsync(string username);
-    Task<TokenInfo?> GetTokenInfoAsync(string refreshToken);
-    Task DeleteTokenAsync(string username);
+    public Task AddFileAsync(FileEntity fileEntity);
 }
 
-public class TokenRepository : ITokenRepository
+public class FileRepository : IFileRepository
 {
     private readonly AppDbContext _context;
 
-    public TokenRepository(AppDbContext context)
+    public FileRepository(AppDbContext context)
     {
         _context = context;
     }
 
-    public async Task AddTokenAsync(TokenInfo entity)
+    public async Task AddFileAsync(FileEntity fileEntity)
     {
-        await _context.TokenStore.AddAsync(entity);
+        await _context.Files.AddAsync(fileEntity);
         await _context.SaveChangesAsync();
     }
 

@@ -163,6 +163,7 @@ public class UserService : IUserService
         // Creating the necessary claims
         List<Claim> authClaims =
         [
+            new Claim(ClaimTypes.NameIdentifier, user.Id),
             new(
                 ClaimTypes.Name,
                 user.UserName
