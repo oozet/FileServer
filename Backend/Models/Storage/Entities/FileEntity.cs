@@ -5,9 +5,10 @@ public class FileEntity
     public string ContentType { get; set; }
     public long Length { get; set; }
     public required byte[] Content { get; set; }
-    public string? Directory { get; set; }
-    public string? ParentDirectory { get; set; }
 
+
+    public int DirectoryId { get; set; }
+    public DirectoryEntity directory { get; set; }
     public required string UserId { get; set; }
     public AppUser User { get; set; }
 }

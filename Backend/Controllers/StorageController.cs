@@ -9,21 +9,23 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 
 [ApiController]
-[Route("file")]
-public class FileController : ControllerBase
+[Route("storage")]
+public class StorageController : ControllerBase
 {
     private readonly IFileService _fileService;
-    private readonly ILogger<FileController> _logger;
+    private readonly IDirectoryService _directoryService;
+    private readonly ILogger<StorageController> _logger;
 
-    public FileController(IFileService fileService, ILogger<FileController> logger)
+    public StorageController(IFileService fileService, IDirectoryService directoryService, ILogger<StorageController> logger)
     {
         _fileService = fileService;
+        _directoryService = directoryService;
         _logger = logger;
     }
 
     [Authorize]
     [HttpPost]
-    public async Task<IActionResult> UploadFiles([FromForm] IEnumerable<IFormFile> files)
+    public async Task<IActionResult> UploadFiles([FromForm] IEnumerable<IFormFile> files, int directoryId)
     {
         try
         {
@@ -49,11 +51,12 @@ public class FileController : ControllerBase
                     ContentType = file.ContentType,
                     Length = file.Length,
                     Content = memoryStream.ToArray(),
+                    DirectoryId = directoryId,
                     UserId = userId,
                 };
                 try
                 {
-                    await _fileService.SaveFile(fileEntitity);
+                    await _fileService.SaveFileAsync(fileEntitity);
                 }
                 catch (Exception ex)
                 {
@@ -127,11 +130,22 @@ public class FileController : ControllerBase
 
     [Authorize]
     [HttpGet]
-    public async Task<IActionResult> GetFileList()
+    public async Task<IActionResult> GetDirectoryTree()
     {
         try
         {
-            return null;
+            var userId =
+                User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? throw new UnauthorizedAccessException("User Id cannot be null.");
+
+            var directoryTree = await _directoryService.GetDirectoriesByUserIdAsync(userId);
+            if (directoryTree.Count() == 0)
+            {
+                directoryTree.Add(await _directoryService.CreateRootAsync(userId));
+            }
+
+            var fileList = await _fileService.GetFilesByUserId(userId);
+            return Ok(fileList);
         }
         catch (NullReferenceException)
         {

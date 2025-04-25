@@ -9,13 +9,10 @@ public interface ITokenRepository
     Task DeleteTokenAsync(string username);
 }
 
-public class TokenRepository : ITokenRepository
+public class TokenRepository : Repository<TokenInfo>, ITokenRepository
 {
-    private readonly AppDbContext _context;
-
-    public TokenRepository(AppDbContext context)
+    public TokenRepository(AppDbContext context) : base(context)
     {
-        _context = context;
     }
 
     public async Task AddTokenAsync(TokenInfo entity)

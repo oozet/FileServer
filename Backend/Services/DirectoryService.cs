@@ -14,22 +14,21 @@ public interface IDirectoryService
         int? parentDirectoryId,
         string userId
     );
+    Task<List<DirectoryEntity>> GetDirectoriesByUserIdAsync(string userId);
+    Task<DirectoryEntity> CreateRootAsync(string userId);
 }
 
 public class DirectoryService : IDirectoryService
 {
     private readonly IDirectoryRepository _directoryRepository;
-    private readonly ITokenService _tokenService;
     private readonly ILogger<AuthController> _logger;
 
     public DirectoryService(
         IDirectoryRepository directoryRepository,
-        ITokenService tokenService,
         ILogger<AuthController> logger
     )
     {
         _directoryRepository = directoryRepository;
-        _tokenService = tokenService;
         _logger = logger;
     }
 
@@ -56,7 +55,24 @@ public class DirectoryService : IDirectoryService
             UserId = userId,
         };
 
-        //await _directoryRepository.AddAsync(newDirectory);
+        await _directoryRepository.AddAsync(newDirectory);
         return newDirectory;
+    }
+
+    public async Task<List<DirectoryEntity>> GetDirectoriesByUserIdAsync(string userId)
+    {
+        return await _directoryRepository.GetAllByUserId(userId);
+    }
+
+    public async Task<DirectoryEntity> CreateRootAsync(string userId)
+    {
+        var root = new DirectoryEntity
+        {
+            Name = "Root",
+            UserId = userId
+        };
+
+        await _directoryRepository.AddAsync(root);
+        return root;
     }
 }

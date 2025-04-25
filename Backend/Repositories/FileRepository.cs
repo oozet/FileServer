@@ -1,54 +1,65 @@
 using Microsoft.EntityFrameworkCore;
 
-public interface IFileRepository
+public interface IFileRepository : IRepository
 {
     public Task AddFileAsync(FileEntity fileEntity);
+    public Task<List<FileEntity>> GetFilesByUserIdAsync(string userId);
 }
 
-public class FileRepository : IFileRepository
+public class FileRepository : Repository<FileEntity>, IFileRepository
 {
-    private readonly AppDbContext _context;
 
-    public FileRepository(AppDbContext context)
-    {
-        _context = context;
-    }
+    public FileRepository(AppDbContext context) : base(context)
+    { }
 
     public async Task AddFileAsync(FileEntity fileEntity)
     {
-        await _context.Files.AddAsync(fileEntity);
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task UpdateTokenAsync(TokenInfo tokenInfo)
-    {
-        // Ensure the entity is tracked if it's detached
-        if (_context.Entry(tokenInfo).State == EntityState.Detached)
+        var directory = await _context.Directories.FindAsync(fileEntity.DirectoryId) ?? throw new Exception("Directory missing");
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        try
         {
-            _context.Attach(tokenInfo);
-            _context.Entry(tokenInfo).State = EntityState.Modified;
-        }
+            directory.Files.Add(fileEntity);
+            _context.Directories.Update(directory);
 
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task<TokenInfo?> GetTokenByUsernameAsync(string username)
-    {
-        return await _context.TokenStore.FirstOrDefaultAsync(t => t.UserName == username);
-    }
-
-    public async Task<TokenInfo?> GetTokenInfoAsync(string refreshToken)
-    {
-        return await _context.TokenStore.FirstOrDefaultAsync(t => t.RefreshToken == refreshToken);
-    }
-
-    public async Task DeleteTokenAsync(string username)
-    {
-        var token = await GetTokenByUsernameAsync(username);
-        if (token != null)
-        {
-            _context.TokenStore.Remove(token);
+            await _context.Files.AddAsync(fileEntity);
             await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
         }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    // public async Task AddFileDirAsync(FileEntity fileEntity)
+    // {
+    //     await _context.Files.AddAsync(fileEntity);
+    //     await _context.SaveChangesAsync();
+    //     using var transaction = await _context.Database.BeginTransactionAsync();
+    //     try
+    //     {
+    //         await _context.
+    //         await _context.AddAsync(directoryEntity);
+    //         await _context.SaveChangesAsync();
+
+    //         fileEntity.DirectoryId = directoryEntity.Id;
+    //         await _context.AddAsync(fileEntity);
+    //         await _context.SaveChangesAsync();
+
+    //         await transaction.CommitAsync();
+    //     }
+    //     catch
+    //     {
+    //         await transaction.RollbackAsync();
+    //         throw;
+    //     }
+    // }
+
+    public async Task<List<FileEntity>> GetFilesByUserIdAsync(string userId)
+    {
+        return await _context.Files.Where(file => file.UserId == userId).ToListAsync();
     }
 }
+

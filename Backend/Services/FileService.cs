@@ -1,16 +1,10 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Identity;
+
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 
 public interface IFileService
 {
-    Task SaveFile(FileEntity fileEntity);
-    Task<List<FileEntity>> GetFilesByUserId(string userId);
+    Task SaveFileAsync(FileEntity fileEntity);
+    Task<List<FileInformationDto>> GetFilesByUserIdAsync(string userId);
     Task<FileEntity> GetFileAsync(string userId, string fileId);
     Task<Dictionary<FileEntity, string>> GetAllFiles();
 }
@@ -18,11 +12,13 @@ public interface IFileService
 public class FileService : IFileService
 {
     private readonly IFileRepository _fileRepository;
+    private readonly IDirectoryRepository _directoryRepository;
     private readonly ILogger<AuthController> _logger;
 
-    public FileService(IFileRepository fileRepository, ILogger<AuthController> logger)
+    public FileService(IFileRepository fileRepository, IDirectoryRepository directoryRepository, ILogger<AuthController> logger)
     {
         _fileRepository = fileRepository;
+        _directoryRepository = directoryRepository;
         _logger = logger;
     }
 
@@ -36,13 +32,36 @@ public class FileService : IFileService
         throw new NotImplementedException();
     }
 
-    public Task<List<FileEntity>> GetFilesByUserId(string userId)
+    public async Task<List<FileInformationDto>> GetFilesByUserIdAsync(string userId)
     {
-        throw new NotImplementedException();
+        var fileList = new List<FileInformationDto>();
+        var files = await _fileRepository.GetFilesByUserIdAsync(userId);
+        foreach (var fileEntity in files)
+        {
+            fileList.Add(
+                new FileInformationDto
+                {
+                    Name = fileEntity.Name,
+                    DirectoryId = fileEntity.DirectoryId
+                }
+            );
+        }
+
+        return fileList;
     }
 
-    public async Task SaveFile(FileEntity fileEntity)
+    public async Task SaveFileAsync(FileEntity fileEntity)
     {
-        await _fileRepository.AddFileAsync(fileEntity);
+        try
+        {
+            var dir = await _directoryRepository.GetByIdAsync(fileEntity.DirectoryId) ?? throw new Exception("Directory not found.");
+            dir.Files.Add(fileEntity);
+            await _fileRepository.AddFileAsync(fileEntity);
+        }
+
+        catch
+        {
+            throw;
+        }
     }
 }

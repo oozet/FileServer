@@ -2,24 +2,22 @@ using Microsoft.EntityFrameworkCore;
 
 public interface IDirectoryRepository
 {
-    Task AddSync(DirectoryEntity entity);
+    Task AddAsync(DirectoryEntity entity);
     Task<DirectoryEntity> GetByNameAndParentAsync(
         string name,
         int? parentDirectoryId,
         string userId
     );
+    Task<DirectoryEntity?> GetByIdAsync(int id);
+    Task<List<DirectoryEntity>> GetAllByUserId(string userId);
 }
 
-public class DirectoryRepository : IDirectoryRepository
+public class DirectoryRepository : Repository<DirectoryEntity>, IDirectoryRepository
 {
-    private readonly AppDbContext _context;
+    public DirectoryRepository(AppDbContext context) : base(context) { }
 
-    public DirectoryRepository(AppDbContext context)
-    {
-        _context = context;
-    }
 
-    public async Task AddSync(DirectoryEntity entity)
+    public async Task AddAsync(DirectoryEntity entity)
     {
         await _context.Directories.AddAsync(entity);
         await _context.SaveChangesAsync();
@@ -32,5 +30,16 @@ public class DirectoryRepository : IDirectoryRepository
     )
     {
         throw new NotImplementedException();
+    }
+
+
+    public async Task<DirectoryEntity?> GetByIdAsync(int id)
+    {
+        return await _context.Directories.FirstOrDefaultAsync(dir => dir.Id == id);
+    }
+
+    public async Task<List<DirectoryEntity>> GetAllByUserId(string userId)
+    {
+        return await _context.Directories.Where(dir => dir.UserId == userId).ToListAsync();
     }
 }
