@@ -98,8 +98,8 @@ public class UserService : IUserService
 
             return new UserDto
             {
-                UserId = userId,
-                UserName = user.UserName ?? string.Empty,
+                Id = userId,
+                Name = user.UserName ?? string.Empty,
                 Email = user.Email ?? string.Empty,
             };
         }

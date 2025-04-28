@@ -16,7 +16,11 @@ public class StorageController : ControllerBase
     private readonly IDirectoryService _directoryService;
     private readonly ILogger<StorageController> _logger;
 
-    public StorageController(IFileService fileService, IDirectoryService directoryService, ILogger<StorageController> logger)
+    public StorageController(
+        IFileService fileService,
+        IDirectoryService directoryService,
+        ILogger<StorageController> logger
+    )
     {
         _fileService = fileService;
         _directoryService = directoryService;
@@ -25,10 +29,14 @@ public class StorageController : ControllerBase
 
     [Authorize]
     [HttpPost]
-    public async Task<IActionResult> UploadFiles([FromForm] IEnumerable<IFormFile> files, int directoryId)
+    public async Task<IActionResult> UploadFiles(
+        [FromForm] IEnumerable<IFormFile> files,
+        [FromForm] int directoryId
+    )
     {
         try
         {
+            _logger.LogInformation("Directory ID: " + directoryId);
             var userId =
                 User.FindFirstValue(ClaimTypes.NameIdentifier)
                 ?? throw new UnauthorizedAccessException("User Id cannot be null.");
@@ -89,6 +97,31 @@ public class StorageController : ControllerBase
     }
 
     [Authorize]
+    [HttpPost("create-dir")]
+    public async Task<IActionResult> CreateDirectory([FromBody] CreateDirectoryRequest request)
+    {
+        try
+        {
+            var userId =
+                User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? throw new UnauthorizedAccessException("User Id cannot be null.");
+
+            var directory = await _directoryService.CreateDirectoryAsync(request, userId);
+
+            return Ok();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogError(ex, "Error retrieving user id from claims");
+            return Unauthorized();
+        }
+        catch (Exception)
+        {
+            return BadRequest("Unable to create directory");
+        }
+    }
+
+    [Authorize]
     [HttpGet("{id}")]
     public async Task<IActionResult> DownloadFile(string id)
     {
@@ -144,21 +177,48 @@ public class StorageController : ControllerBase
                 directoryTree.Add(await _directoryService.CreateRootAsync(userId));
             }
 
-            var fileList = await _fileService.GetFilesByUserId(userId);
-            return Ok(fileList);
+            var directories = new List<DirectoryDto>();
+            foreach (var directory in directoryTree)
+            {
+                directories.Add(
+                    new DirectoryDto()
+                    {
+                        Id = directory.Id,
+                        Name = directory.Name,
+                        ParentDirectoryId = directory.ParentDirectoryId,
+                    }
+                );
+            }
+
+            var fileList = await _fileService.GetFilesByUserIdAsync(userId);
+            var files = new List<FileInformationDto>();
+            foreach (var file in fileList)
+            {
+                files.Add(
+                    new FileInformationDto()
+                    {
+                        Id = file.Id,
+                        Name = file.Name,
+                        ParentDirectoryId = file.ParentDirectoryId,
+                    }
+                );
+            }
+
+            return Ok(new { directories, files });
         }
         catch (NullReferenceException)
         {
             return NotFound("User doesn't exist.");
         }
-        catch (UnauthorizedAccessException)
+        catch (UnauthorizedAccessException ex)
         {
+            _logger.LogError(ex, "Error retrieving user id from claims");
             return Unauthorized();
         }
         catch (Exception ex)
         {
-            _logger.LogError("An exception occurred: {Message}", ex.Message);
-            return BadRequest();
+            _logger.LogError(ex, "Server error.");
+            return StatusCode(500, "Unexpected error.");
         }
     }
 }

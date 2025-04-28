@@ -1,15 +1,13 @@
-import React, { useContext } from "react";
-import { AuthContext } from "../../context/auth-context";
+import { useLogout } from "../../api/use-login";
 
 const LogoutButton: React.FC = () => {
+    const { logout } = useLogout();
 
-    const authContext = useContext(AuthContext);
-
-    const { logout, user } = authContext;
-    const handleLogout = () => {
-        logout(); // Clears the context
+    const handleLogout = async () => {
+        await logout();
     };
 
-    return <><div>{user?.name}</div><button onClick={handleLogout}>Logout</button></>;
+    return <><button onClick={handleLogout}>Logout</button></>;
 };
+
 export default LogoutButton;

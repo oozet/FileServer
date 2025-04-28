@@ -2,22 +2,24 @@ import React, { createContext, useState, ReactNode, useEffect, useContext } from
 
 // Define types for AuthContext and its values
 interface AuthContextType {
-  authToken: string | null;
+  accessToken: string | null;
   user: User | null;
   saveLogin: (accessToken: string, user: User) => void;
-  logout: () => void;
+  clearUser: () => void;
 }
 
 const defaultAuthContext: AuthContextType = {
-  authToken: null,
+  accessToken: null,
   user: null,
   saveLogin: () => { },
-  logout: () => { },
+  clearUser: () => { },
 }
 
 interface User {
   id: string;
   name: string;
+  firstName: string | null,
+  lastName: string | null,
   email: string;
 }
 
@@ -28,29 +30,27 @@ interface AuthProviderProps {
 }
 
 const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
 
   const saveLogin = (accessToken: string, user: User) => {
-    setAuthToken(accessToken);
+    setAccessToken(accessToken);
     setUser(user);
-    // setUser(userData);
   };
 
-  const logout = () => {
-    setAuthToken(null);
-    // setUser(null);
+  const clearUser = () => {
+    setAccessToken(null);
+    setUser(null);
   };
 
 
   useEffect(() => {
     const autoLogin = async () => {
-      console.log("useEffect called.");
       if (!user) {
-        const response = await fetch('http://localhost:5264/get-user', {
+        const response = await fetch('http://localhost:5264/auth/generate-access-token', {
           method: 'POST',
           credentials: 'include', // Include the cookie with the request
-          body: authToken ?? "",
+          body: accessToken ?? "",
         });
         console.log(response);
         if (!response.ok) {
@@ -58,8 +58,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return
         }
         const data = await response.json();
-        // Save the new access token in React Context or localStorage
-        console.log(data + " trying to refresh.");
+
         saveLogin(data.accessToken, data.user);
       };
     }
@@ -68,7 +67,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ authToken, user, saveLogin, logout }}>
+    <AuthContext.Provider value={{ accessToken, user, saveLogin, clearUser }}>
       {children}
     </AuthContext.Provider>
   );

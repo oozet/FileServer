@@ -83,8 +83,10 @@ public class AuthController : ControllerBase
                     accessToken = accessToken,
                     user = new UserDto
                     {
-                        UserId = appUser.Id,
-                        UserName = appUser.UserName ?? string.Empty,
+                        Id = appUser.Id,
+                        Name = appUser.UserName ?? string.Empty,
+                        FirstName = appUser.FirstName,
+                        LastName = appUser.LastName,
                         Email = appUser.Email ?? string.Empty,
                     },
                 }
@@ -164,8 +166,8 @@ public class AuthController : ControllerBase
                     accessToken = newAccessToken,
                     user = new UserDto
                     {
-                        UserId = appUser.Id,
-                        UserName = appUser.UserName ?? string.Empty,
+                        Id = appUser.Id,
+                        Name = appUser.UserName ?? string.Empty,
                         Email = appUser.Email ?? string.Empty,
                     },
                 }
@@ -235,12 +237,16 @@ public class AuthController : ControllerBase
     [HttpPost("logout")]
     public async Task<IActionResult> LogoutAsync()
     {
+        _logger.LogInformation("Logout attempted.");
         if (User?.Identity?.Name == null)
             throw new InvalidOperationException("Critical error: UserName is null");
         var refreshToken = Request.Cookies["refreshToken"];
+        _logger.LogInformation(refreshToken);
         if (!string.IsNullOrEmpty(refreshToken))
         {
-            await _tokenService.RevokeAsync(User.Identity.Name);
+            var success = await _tokenService.RevokeAsync(User.Identity.Name);
+
+            _logger.LogInformation("Revoke success?" + success);
         }
         Response.Cookies.Delete("refreshToken");
         return Ok("Logged out");

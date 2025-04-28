@@ -45,6 +45,11 @@ body {
   display: flex;
   min-width: 320px;
   min-height: 100vh;
+
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-weight: 400;
+  color: rgba(112, 199, 139, 0.87);
+  text-align: justify;
 }
 
 button {
@@ -53,6 +58,7 @@ button {
   padding: 1rem, 2rem;
   text-align: center;
   font-family: inherit;
+  color: inherit;
   background-color: #1a1a1a;
   cursor: pointer;
   transition: border-color 0.25s;
@@ -72,17 +78,4 @@ h1 {
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
 }

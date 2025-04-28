@@ -1,6 +1,5 @@
-public class FileInformationDto
+public class CreateDirectoryRequest
 {
-    public required string Id { get; set; }
     public required string Name { get; set; }
     public int ParentDirectoryId { get; set; }
 }

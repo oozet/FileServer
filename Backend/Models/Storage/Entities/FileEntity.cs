@@ -1,14 +1,23 @@
+using System.ComponentModel.DataAnnotations;
+
 public class FileEntity
 {
-    public Guid Id { get; set; }
+    [Key]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    [Required]
     public required string Name { get; set; }
-    public string ContentType { get; set; }
+    public required string ContentType { get; set; }
     public long Length { get; set; }
+
+    [Required]
     public required byte[] Content { get; set; }
 
+    [Required]
+    public required int DirectoryId { get; set; }
+    public DirectoryEntity Directory { get; set; }
 
-    public int DirectoryId { get; set; }
-    public DirectoryEntity directory { get; set; }
+    [Required]
     public required string UserId { get; set; }
     public AppUser User { get; set; }
 }

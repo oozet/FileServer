@@ -1,4 +1,3 @@
-
 using Microsoft.EntityFrameworkCore;
 
 public interface IFileService
@@ -15,7 +14,11 @@ public class FileService : IFileService
     private readonly IDirectoryRepository _directoryRepository;
     private readonly ILogger<AuthController> _logger;
 
-    public FileService(IFileRepository fileRepository, IDirectoryRepository directoryRepository, ILogger<AuthController> logger)
+    public FileService(
+        IFileRepository fileRepository,
+        IDirectoryRepository directoryRepository,
+        ILogger<AuthController> logger
+    )
     {
         _fileRepository = fileRepository;
         _directoryRepository = directoryRepository;
@@ -41,8 +44,9 @@ public class FileService : IFileService
             fileList.Add(
                 new FileInformationDto
                 {
+                    Id = fileEntity.Id,
                     Name = fileEntity.Name,
-                    DirectoryId = fileEntity.DirectoryId
+                    ParentDirectoryId = fileEntity.DirectoryId,
                 }
             );
         }
@@ -54,11 +58,12 @@ public class FileService : IFileService
     {
         try
         {
-            var dir = await _directoryRepository.GetByIdAsync(fileEntity.DirectoryId) ?? throw new Exception("Directory not found.");
+            var dir =
+                await _directoryRepository.GetByIdAsync(fileEntity.DirectoryId)
+                ?? throw new Exception("Directory not found.");
             dir.Files.Add(fileEntity);
             await _fileRepository.AddFileAsync(fileEntity);
         }
-
         catch
         {
             throw;

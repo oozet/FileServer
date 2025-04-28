@@ -15,7 +15,7 @@ export const useLogin = () => {
         setError(null);
 
         try {
-            const response = await fetch("http://localhost:5264/login", {
+            const response = await fetch("http://localhost:5264/auth/login", {
                 method: "POST",
                 credentials: "include",
                 headers: {
@@ -31,8 +31,8 @@ export const useLogin = () => {
             }
 
 
-            const { data } = await response.json();
-            saveLogin(data.accessToken, data.user);
+            const { accessToken, user } = await response.json();
+            saveLogin(accessToken, user);
             // return data; // This would typically include your JWT token or session info
         } catch (err: any) {
             setError(err.message);
@@ -46,26 +46,25 @@ export const useLogin = () => {
 };
 
 export const useTokenLogin = () => {
-    const { saveLogin, authToken } = useAuth();
+    const { saveLogin, accessToken } = useAuth();
 
     const tokenLogin = async () => {
 
         try {
-            const response = await fetch('http://localhost:5264/get-user', {
+            const response = await fetch('http://localhost:5264/auth/generate-access-token', {
                 method: 'POST',
                 credentials: 'include', // Include the cookie with the request
-                body: authToken ?? "",
+                body: accessToken ?? "",
             });
 
-            console.log(response);
+
             if (!response.ok) {
-                console.log('Refresh token is invalid or expired');
                 return
             }
 
-
-            const { data } = await response.json();
-            saveLogin(data.accessToken, data.user);
+            console.log("valid autologin response.");
+            const { token, user } = await response.json();
+            saveLogin(token, user);
             // return data; // This would typically include your JWT token or session info
         } catch (err: any) {
             console.error(err);
@@ -74,4 +73,39 @@ export const useTokenLogin = () => {
     };
 
     return { tokenLogin };
+};
+
+
+
+export const useLogout = () => {
+    const { clearUser, accessToken, } = useAuth();
+
+    const logout = async () => {
+
+        try {
+            const response = await fetch('http://localhost:5264/auth/logout', {
+                method: 'POST',
+                credentials: "include", // Include cookies for authentication
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "Content-Type": "application/json", // Ensure JSON is correctly parsed
+                },
+            });
+
+
+            if (!response.ok) {
+                console.error("Unable to logout");
+                return;
+            }
+
+            clearUser();
+
+            // return data; // This would typically include your JWT token or session info
+        } catch (err: any) {
+            console.error(err);
+            return null;
+        }
+    };
+
+    return { logout };
 };

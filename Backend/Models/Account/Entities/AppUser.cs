@@ -2,5 +2,8 @@ using Microsoft.AspNetCore.Identity;
 
 public class AppUser : IdentityUser
 {
-    // Might extend IdentityUser later.
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+
+    public IEnumerable<DirectoryEntity> directoryEntities { get; set; } = [];
 }
