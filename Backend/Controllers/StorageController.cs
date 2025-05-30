@@ -106,9 +106,11 @@ public class StorageController : ControllerBase
                 User.FindFirstValue(ClaimTypes.NameIdentifier)
                 ?? throw new UnauthorizedAccessException("User Id cannot be null.");
 
-            var directory =
+            DirectoryEntity directory =
                 await _directoryService.CreateDirectoryAsync(request, userId)
                 ?? throw new NullReferenceException();
+
+            Console.WriteLine("Tried to create dir:" + directory.Name);
 
             return Ok();
         }

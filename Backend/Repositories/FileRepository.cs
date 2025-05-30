@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-public interface IFileRepository : IRepository<FileEntity>
+public interface IFileRepository
 {
     public Task AddAsync(FileEntity fileEntity);
     public Task<FileEntity?> GetAsync(string fileId);
@@ -39,30 +39,6 @@ public class FileRepository : Repository<FileEntity>, IFileRepository
     {
         return await _context.Files.FirstOrDefaultAsync(file => file.Id == fileId);
     }
-
-    // public async Task AddFileDirAsync(FileEntity fileEntity)
-    // {
-    //     await _context.Files.AddAsync(fileEntity);
-    //     await _context.SaveChangesAsync();
-    //     using var transaction = await _context.Database.BeginTransactionAsync();
-    //     try
-    //     {
-    //         await _context.
-    //         await _context.AddAsync(directoryEntity);
-    //         await _context.SaveChangesAsync();
-
-    //         fileEntity.DirectoryId = directoryEntity.Id;
-    //         await _context.AddAsync(fileEntity);
-    //         await _context.SaveChangesAsync();
-
-    //         await transaction.CommitAsync();
-    //     }
-    //     catch
-    //     {
-    //         await transaction.RollbackAsync();
-    //         throw;
-    //     }
-    // }
 
     public async Task<List<FileEntity>> GetFilesByUserIdAsync(string userId)
     {

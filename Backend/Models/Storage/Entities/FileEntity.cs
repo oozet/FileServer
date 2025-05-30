@@ -15,9 +15,9 @@ public class FileEntity
 
     [Required]
     public required int DirectoryId { get; set; }
-    public DirectoryEntity Directory { get; set; }
+    public DirectoryEntity? Directory { get; set; }
 
     [Required]
     public required string UserId { get; set; }
-    public AppUser User { get; set; }
+    public AppUser? User { get; set; }
 }

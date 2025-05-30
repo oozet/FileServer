@@ -19,8 +19,8 @@ export const useRegister = () => {
             if (response.ok) {
                 return true;
             }
-            const error = await response.text();
-            throw new Error(error);
+            const error = await response.json();
+            throw new Error(error.message);
         }
         catch (err: any) {
             setError(err.message);

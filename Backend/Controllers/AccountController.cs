@@ -16,7 +16,6 @@ public class AuthController : ControllerBase
 
     public AuthController(
         IUserService userService,
-        SignInManager<AppUser> signInManager,
         ITokenService tokenService,
         ILogger<AuthController> logger
     )
@@ -43,7 +42,7 @@ public class AuthController : ControllerBase
             }
 
             var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-            return BadRequest("Registration failed: " + errors);
+            return BadRequest(new ApiError("Registration failed: " + errors));
         }
         catch (Exception ex)
         {
@@ -52,7 +51,7 @@ public class AuthController : ControllerBase
                 "Unexpected error while creating user {username}",
                 request.Username
             );
-            return BadRequest("Unable to create user.");
+            return StatusCode(500, new ApiError("Unable to create user."));
         }
     }
 
@@ -87,10 +86,10 @@ public class AuthController : ControllerBase
             Response.Cookies.Append("refreshToken", refreshToken, cookieOptions);
 
             return Ok(
-                new
+                new LoginResponse
                 {
-                    accessToken = accessToken,
-                    user = new UserDto
+                    AccessToken = accessToken,
+                    User = new UserDto
                     {
                         Id = appUser.Id,
                         Name = appUser.UserName ?? string.Empty,
@@ -103,7 +102,7 @@ public class AuthController : ControllerBase
         }
         catch (NotFoundException)
         {
-            return NotFound("User doesn't exist.");
+            return NotFound(new ApiError("User doesn't exist."));
         }
         catch (UnauthorizedAccessException)
         {
@@ -112,7 +111,7 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError("An exception occurred: {Message}", ex.Message);
-            return BadRequest();
+            return StatusCode(500, new ApiError("Server error while trying to log in."));
         }
     }
 
@@ -123,7 +122,7 @@ public class AuthController : ControllerBase
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))
         {
-            return Unauthorized("User ID not found in token");
+            return Unauthorized(new ApiError("User ID not found."));
         }
 
         try
@@ -185,7 +184,7 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex.Message, "Unable to generate access token.");
-            return StatusCode(StatusCodes.Status500InternalServerError);
+            return StatusCode(500, new ApiError("Unexpected server error."));
         }
     }
 
@@ -198,7 +197,7 @@ public class AuthController : ControllerBase
 
             if (string.IsNullOrEmpty(refreshToken))
             {
-                return BadRequest("Refresh token is missing.");
+                return BadRequest(new ApiError("Refresh token is missing."));
             }
 
             var principal = _tokenService.GetPrincipalFromExpiredToken(accessToken);
@@ -206,12 +205,12 @@ public class AuthController : ControllerBase
 
             var claims = principal?.Claims;
             if (username == null || claims == null)
-                return BadRequest("Invalid refresh token. Please login again.");
+                return BadRequest(new ApiError("Invalid refresh token. Please login again."));
 
             var tokenResult = await _tokenService.ValidateRefreshToken(username, refreshToken);
             if (!tokenResult.Success)
             {
-                return BadRequest(tokenResult.ErrorMessage);
+                return BadRequest(new ApiError(tokenResult.ErrorMessage));
             }
 
             var newAccessToken = _tokenService.GenerateAccessToken(claims);
@@ -231,34 +230,35 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex.Message, "Unable to refresh token {accessToken}", accessToken);
-            return StatusCode(StatusCodes.Status500InternalServerError);
+            return StatusCode(500, new ApiError("Unexpected server error."));
         }
-    }
-
-    [Authorize]
-    [HttpGet("secure-data")]
-    public IActionResult SecureEndpoint()
-    {
-        return Ok("This data is only accessible with a valid JWT!");
     }
 
     [Authorize]
     [HttpPost("logout")]
     public async Task<IActionResult> LogoutAsync()
     {
-        _logger.LogInformation("Logout attempted.");
-        if (User?.Identity?.Name == null)
-            throw new InvalidOperationException("Critical error: UserName is null");
-        var refreshToken = Request.Cookies["refreshToken"];
-        _logger.LogInformation(refreshToken);
-        if (!string.IsNullOrEmpty(refreshToken))
+        try
         {
-            var success = await _tokenService.RevokeAsync(User.Identity.Name);
+            _logger.LogInformation("Logout attempted.");
+            if (User?.Identity?.Name == null)
+                throw new InvalidOperationException("Critical error: UserName is null");
+            var refreshToken = Request.Cookies["refreshToken"];
+            _logger.LogInformation(refreshToken);
+            if (!string.IsNullOrEmpty(refreshToken))
+            {
+                var success = await _tokenService.RevokeAsync(User.Identity.Name);
 
-            _logger.LogInformation("Revoke success?" + success);
+                _logger.LogInformation("Revoke success?" + success);
+            }
+            Response.Cookies.Delete("refreshToken");
+            return NoContent();
         }
-        Response.Cookies.Delete("refreshToken");
-        return Ok("Logged out");
+        catch (Exception ex)
+        {
+            _logger.LogCritical(ex, "Error while trying to log out a user.");
+            return StatusCode(500, new ApiError("Unexpected server error."));
+        }
     }
 
     [HttpPost("request-password")]
@@ -266,7 +266,7 @@ public class AuthController : ControllerBase
     {
         if (!email.Contains('@') || !email.Contains('.'))
         {
-            return BadRequest("Invalid email adress.");
+            return BadRequest(new ApiError("Invalid email adress format."));
         }
         try
         {
@@ -287,9 +287,15 @@ public class AuthController : ControllerBase
 
             return BadRequest("");
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogCritical(ex, "This endpoint is only implemented for debugging. Needs rework for release mode.");
+            return StatusCode(500, new ApiError("Unexpected server error."));
+        }
         catch
         {
-            return BadRequest("");
+            _logger.LogError($"Server error while trying to reset password for email: {email}");
+            return StatusCode(500, new ApiError("Unexpected server error."));
         }
     }
 
@@ -300,11 +306,11 @@ public class AuthController : ControllerBase
         try
         {
             await _userService.ResetPasswordAsync(model);
-            return Ok("Password successfully reset.");
+            return NoContent();
         }
         catch (NullReferenceException)
         {
-            return NotFound("User not found in database.");
+            return NotFound(new ApiError("User not found in database."));
         }
     }
 }

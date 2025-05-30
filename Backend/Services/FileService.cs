@@ -72,7 +72,6 @@ public class FileService : IFileService
                 ?? throw new Exception("Directory not found.");
             dir.Files.Add(fileEntity);
             await _fileRepository.AddAsync(fileEntity);
-            await _fileRepository.SaveChangesAsync();
         }
         catch
         {

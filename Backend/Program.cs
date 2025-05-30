@@ -52,6 +52,7 @@ builder
                 )
             ),
         };
+        // Could be used for custom claims checks.
         options.Events = new JwtBearerEvents
         {
             OnTokenValidated = context =>

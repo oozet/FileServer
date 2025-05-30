@@ -132,6 +132,7 @@ const TreeBuilder: React.FC<TreeBuilderProps> = ({ activeDirectory, setActiveDir
                 body: JSON.stringify(requestBody),
             });
             if (!response.ok) throw new Error("Failed to create directory");
+            console.log("tried to create a directory.");
             await fetchStorageTree();
         } catch (error) {
             console.error("Error creating directory:", error);

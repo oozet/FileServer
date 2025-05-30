@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 public interface IRepository<T>
     where T : class
 {
+    Task AddAsync(T entity);
     Task<IDbContextTransaction> BeginTransactionAsync();
     Task CommitTransactionAsync();
     Task RollbackTransactionAsync();
