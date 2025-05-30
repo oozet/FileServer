@@ -18,6 +18,7 @@ const DirectoryTree: React.FC<DirectoryTreeProps> = ({ nodes, onFileClick, activ
             setTree([...tree]);
         }
         else if (node.type === 'file') {
+            console.log("file clicked");
             onFileClick(node);
         }
     }
@@ -37,9 +38,10 @@ const DirectoryTree: React.FC<DirectoryTreeProps> = ({ nodes, onFileClick, activ
                     </span>
                     {node.type === "directory" && (
                         <span
-                            onClick={(event) => {
-                                event.stopPropagation();
-                                event.preventDefault(); // Suppress any default actions
+                            onClick={() => {
+                                //onClick={(event) => {
+                                // event.stopPropagation();
+                                // event.preventDefault(); // Suppress any default actions
                                 setActiveDirectory({ name: node.name, id: node.id }); // Update state
                                 console.log(`Active directory set to: ${node.name}`);
                             }}

@@ -9,7 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 
 public interface IUserService
 {
-    Task<bool> CreateUserAsync(string username, string email, string password);
+    Task<IdentityResult> CreateUserAsync(string username, string email, string password);
     Task<AppUser> ValidateUserAsync(LoginDto model);
     Task<List<Claim>> GenerateClaimsAsync(AppUser user);
     Task<AppUser> GetUserAsync(string userIdentifier);
@@ -38,20 +38,24 @@ public class UserService : IUserService
         _logger = logger;
     }
 
-    public async Task<bool> CreateUserAsync(string username, string email, string password)
+    public async Task<IdentityResult> CreateUserAsync(
+        string username,
+        string email,
+        string password
+    )
     {
         try
         {
             var user = new AppUser { UserName = username, Email = email };
             var result = await _userManager.CreateAsync(user, password);
 
-            if (!result.Succeeded)
+            if (result.Succeeded)
             {
-                throw new Exception("Unable to create user");
+                var roleresult = await _userManager.AddToRoleAsync(user, AppRoles.User);
+                if (!roleresult.Succeeded)
+                    throw new Exception("Unable to add user role to roles table.");
             }
-
-            await _userManager.AddToRoleAsync(user, AppRoles.User);
-            return true;
+            return result;
         }
         catch (System.Exception ex)
         {
@@ -94,7 +98,7 @@ public class UserService : IUserService
         {
             // Retrieve user information.
             var user =
-                await _userManager.FindByIdAsync(userId) ?? throw new NullReferenceException();
+                await _userManager.FindByIdAsync(userId) ?? throw new NotFoundException("as");
 
             return new UserDto
             {

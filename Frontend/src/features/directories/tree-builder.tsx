@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/auth-context";
 import DirectoryTree from "./directory-tree";
+import { useAuthFetch } from "../../api/use-auth";
 
 
 export interface TreeNode {
@@ -82,6 +83,7 @@ type TreeBuilderProps = {
 const TreeBuilder: React.FC<TreeBuilderProps> = ({ activeDirectory, setActiveDirectory }) => {
     const [tree, setTree] = useState<TreeNode[]>([]);
     const [newDirectoryName, setNewDirectoryName] = useState<string | null>(null);
+    const authFetch = useAuthFetch();
 
     const { accessToken } = useAuth();
 
@@ -136,21 +138,14 @@ const TreeBuilder: React.FC<TreeBuilderProps> = ({ activeDirectory, setActiveDir
         }
     };
 
-
-
     const downloadFile = async (file: TreeNode) => {
         try {
-            const response = await fetch(`http://localhost:5264/storage/download/${file.id}`, {
-                method: "POST",
-                credentials: "include", // Include cookies for authentication
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    "Content-Type": "application/json", // Ensure JSON is correctly parsed
-                },
+            const response = await authFetch(`http://localhost:5264/storage/download/${file.id}`, {
+                method: "GET",
             });
 
             if (!response.ok) {
-                throw new Error("Failed to download file");
+                throw new Error("Failed to fetch file.");
             }
 
             const blob = await response.blob();
@@ -166,6 +161,39 @@ const TreeBuilder: React.FC<TreeBuilderProps> = ({ activeDirectory, setActiveDir
             console.error("Error downloading file:", error);
         }
     };
+
+    // const downloadFile = async (file: TreeNode) => {
+    //     try {
+    //         const response = await fetch(`http://localhost:5264/storage/download/${file.id}`, {
+    //             method: "GET",
+    //             credentials: "include", // Include cookies for authentication
+    //             headers: {
+    //                 Authorization: "Bearer ${accessToken}"
+    //             },
+    //         });
+
+    //         if (response.status === 401) {
+    //             tokenLogin();
+    //             downloadFile(file);
+    //         }
+
+    //         if (!response.ok) {
+    //             throw new Error("Failed to download file");
+    //         }
+
+    //         const blob = await response.blob();
+    //         const url = window.URL.createObjectURL(blob);
+
+    //         const link = document.createElement("a");
+    //         link.href = url;
+    //         link.download = file.name;
+    //         link.click();
+
+    //         window.URL.revokeObjectURL(url);
+    //     } catch (error) {
+    //         console.error("Error downloading file:", error);
+    //     }
+    // };
 
     return (<>
         <DirectoryTree nodes={tree} onFileClick={downloadFile} activeDirectory={activeDirectory} setActiveDirectory={setActiveDirectory} />

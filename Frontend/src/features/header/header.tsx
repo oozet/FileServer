@@ -1,6 +1,7 @@
 import { useAuth } from "../../context/auth-context";
 import LoginComponent from "../auth/login-component";
 import LogoutButton from "../auth/logout-button";
+import RegisterComponent from "../auth/register-component";
 import "./header.css";
 
 export const Header: React.FC = () => {
@@ -15,7 +16,10 @@ export const Header: React.FC = () => {
                     <LogoutButton />
                 </>
             ) : (
-                <LoginComponent />
+                <>
+                    <RegisterComponent />
+                    <LoginComponent />
+                </>
             )}
         </header>
     );

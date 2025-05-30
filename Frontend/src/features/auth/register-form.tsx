@@ -1,27 +1,40 @@
 import React, { useState } from "react";
-import { useLogin } from "../../api/use-auth";
+import { useRegister } from "../../api/use-auth";
 
-const LoginForm: React.FC = () => {
+interface RegisterFormProps {
+    setShowRegisterForm: React.Dispatch<React.SetStateAction<boolean>>;
+}
+const RegisterForm: React.FC<RegisterFormProps> = ({ setShowRegisterForm }) => {
     const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const { login, isLoading, error } = useLogin();
+    const { register, isLoading, error } = useRegister();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        await login(username, password);
+        const success = await register(username, email, password);
+        if (success) setShowRegisterForm(false);
     };
 
     return (
         <div style={{ maxWidth: "400px", margin: "0 auto" }}>
-            <h2>Login</h2>
+            <h2>Register</h2>
             <form onSubmit={handleSubmit}>
-                <label htmlFor="username">Username or Email</label>
+                <label htmlFor="username">Username</label>
                 <input
                     id="username"
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    required
+                />
+                <label htmlFor="email">Email</label>
+                <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                 />
                 <label>Password</label>
@@ -32,7 +45,7 @@ const LoginForm: React.FC = () => {
                     required
                 />
                 <button type="submit" disabled={isLoading}>
-                    {isLoading ? "Logging in..." : "Login"}
+                    {isLoading ? "Registering..." : "Register"}
                 </button>
                 {error && <p style={{ color: "red" }}>{error}</p>}
             </form>
@@ -40,4 +53,4 @@ const LoginForm: React.FC = () => {
     );
 };
 
-export default LoginForm;
+export default RegisterForm;

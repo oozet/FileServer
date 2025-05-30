@@ -1,4 +1,4 @@
-import { useLogout } from "../../api/use-login";
+import { useLogout } from "../../api/use-auth";
 
 const LogoutButton: React.FC = () => {
     const { logout } = useLogout();

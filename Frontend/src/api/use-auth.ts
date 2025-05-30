@@ -1,8 +1,36 @@
 import { useState } from "react";
 import { useAuth } from "../context/auth-context";
 
-interface LoginResponse {
-    token: string;
+export const useRegister = () => {
+
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const register = async (username: string, email: string, password: string) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const response = await fetch("http://localhost:5264/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, email, password }),
+            });
+
+            if (response.ok) {
+                return true;
+            }
+            const error = await response.text();
+            throw new Error(error);
+        }
+        catch (err: any) {
+            setError(err.message);
+            return false;
+        }
+        finally {
+            setIsLoading(false);
+        }
+    }
+    return { register, isLoading, error };
 }
 
 export const useLogin = () => {
@@ -33,10 +61,10 @@ export const useLogin = () => {
 
             const { accessToken, user } = await response.json();
             saveLogin(accessToken, user);
+
             // return data; // This would typically include your JWT token or session info
         } catch (err: any) {
             setError(err.message);
-            return null;
         } finally {
             setIsLoading(false);
         }
@@ -108,4 +136,35 @@ export const useLogout = () => {
     };
 
     return { logout };
+};
+
+export const useAuthFetch = () => {
+    const { accessToken, } = useAuth();
+    const { tokenLogin } = useTokenLogin();
+
+    const authFetch = async (url: string, options: RequestInit = {}, retryCount = 0): Promise<Response> => {
+        const MAX_RETRIES = 1;
+
+        options.headers = {
+            ...options.headers,
+            Authorization: `Bearer ${accessToken}`,
+        };
+        options.credentials = "include";
+
+        try {
+            const response = await fetch(url, options);
+
+            if (response.status === 401 && retryCount < MAX_RETRIES) {
+                await tokenLogin(); // Refresh token logic
+                return authFetch(url, options, retryCount + 1); // Retry with updated token
+            }
+
+            return response;
+        } catch (error) {
+            console.error("Error during fetch:", error);
+            throw error;
+        }
+    };
+
+    return authFetch;
 };

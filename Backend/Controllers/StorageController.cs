@@ -106,7 +106,9 @@ public class StorageController : ControllerBase
                 User.FindFirstValue(ClaimTypes.NameIdentifier)
                 ?? throw new UnauthorizedAccessException("User Id cannot be null.");
 
-            var directory = await _directoryService.CreateDirectoryAsync(request, userId);
+            var directory =
+                await _directoryService.CreateDirectoryAsync(request, userId)
+                ?? throw new NullReferenceException();
 
             return Ok();
         }
@@ -122,7 +124,7 @@ public class StorageController : ControllerBase
     }
 
     [Authorize]
-    [HttpGet("{id}")]
+    [HttpGet("download/{id}")]
     public async Task<IActionResult> DownloadFile(string id)
     {
         try
@@ -132,10 +134,6 @@ public class StorageController : ControllerBase
                 ?? throw new UnauthorizedAccessException("User Id cannot be null.");
 
             var file = await _fileService.GetFileAsync(userId, id);
-            if (file == null)
-            {
-                return NotFound();
-            }
 
             const long StreamThreshold = 5 * 1024 * 1024;
 
@@ -151,8 +149,23 @@ public class StorageController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogError(ex, "Error retrieving user id from claims");
+            _logger.LogError(
+                ex,
+                "Authorization error occurred while downloading file with ID {id} for user {UserName}.",
+                id,
+                User?.Identity?.Name ?? "Unknown user"
+            );
             return Unauthorized();
+        }
+        catch (NullReferenceException ex)
+        {
+            _logger.LogError(
+                ex,
+                "Authorization error occurred while downloading file with ID {id} for user {UserName}.",
+                id,
+                User?.Identity?.Name ?? "Unknown user"
+            );
+            return NotFound();
         }
         catch (Exception ex)
         {
@@ -172,7 +185,7 @@ public class StorageController : ControllerBase
                 ?? throw new UnauthorizedAccessException("User Id cannot be null.");
 
             var directoryTree = await _directoryService.GetDirectoriesByUserIdAsync(userId);
-            if (directoryTree.Count() == 0)
+            if (directoryTree.Count == 0)
             {
                 directoryTree.Add(await _directoryService.CreateRootAsync(userId));
             }

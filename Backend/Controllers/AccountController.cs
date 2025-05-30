@@ -11,7 +11,6 @@ using Microsoft.IdentityModel.Tokens;
 public class AuthController : ControllerBase
 {
     private readonly IUserService _userService;
-    private readonly SignInManager<AppUser> _signInManager;
     private readonly ITokenService _tokenService;
     private readonly ILogger<AuthController> _logger;
 
@@ -23,22 +22,36 @@ public class AuthController : ControllerBase
     )
     {
         _userService = userService;
-        _signInManager = signInManager;
         _tokenService = tokenService;
         _logger = logger;
     }
 
     [HttpPost("register")]
-    public async Task<IActionResult> Register(string username, string email, string password)
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
         try
         {
-            await _userService.CreateUserAsync(username, email, password);
+            var result = await _userService.CreateUserAsync(
+                request.Username,
+                request.Email,
+                request.Password
+            );
 
-            return Ok("User created successfully!");
+            if (result.Succeeded)
+            {
+                return Ok("User created successfully!");
+            }
+
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            return BadRequest("Registration failed: " + errors);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(
+                ex,
+                "Unexpected error while creating user {username}",
+                request.Username
+            );
             return BadRequest("Unable to create user.");
         }
     }
@@ -55,10 +68,6 @@ public class AuthController : ControllerBase
 
             // Generate Claims from AppUser
             var authClaims = await _userService.GenerateClaimsAsync(appUser);
-            foreach (var claim in authClaims)
-            {
-                Console.WriteLine(claim);
-            }
 
             // Generating access token
             var accessToken = _tokenService.GenerateAccessToken(authClaims);
@@ -92,7 +101,7 @@ public class AuthController : ControllerBase
                 }
             );
         }
-        catch (NullReferenceException)
+        catch (NotFoundException)
         {
             return NotFound("User doesn't exist.");
         }

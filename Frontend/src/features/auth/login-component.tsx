@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { useTokenLogin } from "../../api/use-login";
+import { useTokenLogin } from "../../api/use-auth";
 import LoginForm from "./login-form";
-import "./login-component.css";
+import "./auth-window-component.css";
 
 const LoginComponent: React.FC = () => {
     const { tokenLogin } = useTokenLogin();
@@ -31,7 +31,7 @@ const LoginComponent: React.FC = () => {
             {showLoginForm && (
                 <>
                     <div className="modal-overlay" onClick={handleCloseForm}></div>
-                    <div className="login-form-window">
+                    <div className="auth-form-window">
                         <LoginForm />
                     </div>
                 </>

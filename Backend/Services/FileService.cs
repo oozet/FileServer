@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
 public interface IFileService
@@ -30,9 +31,17 @@ public class FileService : IFileService
         throw new NotImplementedException();
     }
 
-    public Task<FileEntity> GetFileAsync(string userId, string fileId)
+    public async Task<FileEntity> GetFileAsync(string userId, string fileId)
     {
-        throw new NotImplementedException();
+        var file =
+            await _fileRepository.GetAsync(fileId)
+            ?? throw new NullReferenceException("File not found.");
+        if (file.UserId != userId)
+            throw new UnauthorizedAccessException(
+                "Attempted to access a file belongin to other user."
+            );
+
+        return file;
     }
 
     public async Task<List<FileInformationDto>> GetFilesByUserIdAsync(string userId)
@@ -62,7 +71,8 @@ public class FileService : IFileService
                 await _directoryRepository.GetByIdAsync(fileEntity.DirectoryId)
                 ?? throw new Exception("Directory not found.");
             dir.Files.Add(fileEntity);
-            await _fileRepository.AddFileAsync(fileEntity);
+            await _fileRepository.AddAsync(fileEntity);
+            await _fileRepository.SaveChangesAsync();
         }
         catch
         {

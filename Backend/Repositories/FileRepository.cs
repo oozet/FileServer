@@ -1,20 +1,22 @@
 using Microsoft.EntityFrameworkCore;
 
-public interface IFileRepository : IRepository
+public interface IFileRepository : IRepository<FileEntity>
 {
-    public Task AddFileAsync(FileEntity fileEntity);
+    public Task AddAsync(FileEntity fileEntity);
+    public Task<FileEntity?> GetAsync(string fileId);
     public Task<List<FileEntity>> GetFilesByUserIdAsync(string userId);
 }
 
 public class FileRepository : Repository<FileEntity>, IFileRepository
 {
+    public FileRepository(AppDbContext context)
+        : base(context) { }
 
-    public FileRepository(AppDbContext context) : base(context)
-    { }
-
-    public async Task AddFileAsync(FileEntity fileEntity)
+    public new async Task AddAsync(FileEntity fileEntity)
     {
-        var directory = await _context.Directories.FindAsync(fileEntity.DirectoryId) ?? throw new Exception("Directory missing");
+        var directory =
+            await _context.Directories.FindAsync(fileEntity.DirectoryId)
+            ?? throw new Exception("Directory missing");
         await using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -31,6 +33,11 @@ public class FileRepository : Repository<FileEntity>, IFileRepository
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+    public async Task<FileEntity?> GetAsync(string fileId)
+    {
+        return await _context.Files.FirstOrDefaultAsync(file => file.Id == fileId);
     }
 
     // public async Task AddFileDirAsync(FileEntity fileEntity)
@@ -62,4 +69,3 @@ public class FileRepository : Repository<FileEntity>, IFileRepository
         return await _context.Files.Where(file => file.UserId == userId).ToListAsync();
     }
 }
-

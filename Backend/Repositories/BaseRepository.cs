@@ -1,13 +1,18 @@
 using Microsoft.EntityFrameworkCore.Storage;
 
-public interface IRepository
+public interface IRepository<T>
+    where T : class
 {
     Task<IDbContextTransaction> BeginTransactionAsync();
     Task CommitTransactionAsync();
     Task RollbackTransactionAsync();
+    Task SaveChangesAsync();
+    Task<T?> GetAsync<TKey>(TKey key)
+        where TKey : notnull;
 }
 
-public class Repository<T> : IRepository where T : class
+public class Repository<T> : IRepository<T>
+    where T : class
 {
     protected readonly AppDbContext _context;
 
@@ -41,7 +46,18 @@ public class Repository<T> : IRepository where T : class
         _context.Set<T>().Update(entity);
     }
 
+    public async Task<T?> GetAsync<TKey>(TKey key)
+        where TKey : notnull
+    {
+        return await _context.Set<T>().FindAsync(key);
+    }
+
     public async Task<T?> GetByIdAsync(int id)
+    {
+        return await _context.Set<T>().FindAsync(id);
+    }
+
+    public async Task<T?> GetByIdAsync(string id)
     {
         return await _context.Set<T>().FindAsync(id);
     }
