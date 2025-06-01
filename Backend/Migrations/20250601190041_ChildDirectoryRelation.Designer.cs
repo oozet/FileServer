@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -10,9 +11,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FileStorageProject.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250601190041_ChildDirectoryRelation")]
+    partial class ChildDirectoryRelation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -118,6 +121,10 @@ namespace FileStorageProject.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("DirectoryEntityId")
+                        .HasColumnType("integer")
+                        .HasColumnName("directory_entity_id");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
@@ -135,8 +142,8 @@ namespace FileStorageProject.Migrations
                     b.HasKey("Id")
                         .HasName("pk_directories");
 
-                    b.HasIndex("ParentDirectoryId")
-                        .HasDatabaseName("ix_directories_parent_directory_id");
+                    b.HasIndex("DirectoryEntityId")
+                        .HasDatabaseName("ix_directories_directory_entity_id");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_directories_user_id");
@@ -401,9 +408,8 @@ namespace FileStorageProject.Migrations
                 {
                     b.HasOne("DirectoryEntity", null)
                         .WithMany("ChildDirectories")
-                        .HasForeignKey("ParentDirectoryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_directories_directories_parent_directory_id");
+                        .HasForeignKey("DirectoryEntityId")
+                        .HasConstraintName("fk_directories_directories_directory_entity_id");
 
                     b.HasOne("AppUser", "User")
                         .WithMany("directoryEntities")

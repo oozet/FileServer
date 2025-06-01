@@ -308,9 +308,13 @@ public class AuthController : ControllerBase
             await _userService.ResetPasswordAsync(model);
             return NoContent();
         }
-        catch (NullReferenceException)
+        catch (NotFoundException ex)
         {
-            return NotFound(new ApiError("User not found in database."));
+            return NotFound(new ApiError(ex.Message));
+        }
+        catch
+        {
+            return StatusCode(500, new ApiError("Unable to reset password"));
         }
     }
 }

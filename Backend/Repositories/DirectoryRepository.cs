@@ -1,15 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 
-public interface IDirectoryRepository
+public interface IDirectoryRepository : IRepository<DirectoryEntity>
 {
-    Task AddAsync(DirectoryEntity entity);
     Task<DirectoryEntity> GetByNameAndParentAsync(
         string name,
         int? parentDirectoryId,
         string userId
     );
-    Task<DirectoryEntity?> GetByIdAsync(int id);
+    // Task<DirectoryEntity?> GetByIdAsync(int id);
     Task<List<DirectoryEntity>> GetAllByUserId(string userId);
+    Task<DirectoryEntity?> GetWithRelationsAsync(int id);
 }
 
 public class DirectoryRepository : Repository<DirectoryEntity>, IDirectoryRepository
@@ -17,11 +17,11 @@ public class DirectoryRepository : Repository<DirectoryEntity>, IDirectoryReposi
     public DirectoryRepository(AppDbContext context) : base(context) { }
 
 
-    public async Task AddAsync(DirectoryEntity entity)
-    {
-        await _context.Directories.AddAsync(entity);
-        await _context.SaveChangesAsync();
-    }
+    // public async Task AddAsync(DirectoryEntity entity)
+    // {
+    //     await _context.Directories.AddAsync(entity);
+    //     await _context.SaveChangesAsync();
+    // }
 
     public Task<DirectoryEntity> GetByNameAndParentAsync(
         string name,
@@ -33,13 +33,21 @@ public class DirectoryRepository : Repository<DirectoryEntity>, IDirectoryReposi
     }
 
 
-    public async Task<DirectoryEntity?> GetByIdAsync(int id)
-    {
-        return await _context.Directories.FirstOrDefaultAsync(dir => dir.Id == id);
-    }
+    // public async Task<DirectoryEntity?> GetByIdAsync(int id)
+    // {
+    //     return await _context.Directories.FirstOrDefaultAsync(dir => dir.Id == id);
+    // }
 
     public async Task<List<DirectoryEntity>> GetAllByUserId(string userId)
     {
         return await _context.Directories.Where(dir => dir.UserId == userId).ToListAsync();
+    }
+
+    public async Task<DirectoryEntity?> GetWithRelationsAsync(int id)
+    {
+        return await _context.Directories
+        .Include(d => d.Files)
+        .Include(d => d.ChildDirectories)
+        .FirstOrDefaultAsync(d => d.Id == id);
     }
 }

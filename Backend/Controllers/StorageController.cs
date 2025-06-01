@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net.Mime;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
@@ -234,6 +235,72 @@ public class StorageController : ControllerBase
         {
             _logger.LogError(ex, "Server error.");
             return StatusCode(500, "Unexpected error.");
+        }
+    }
+
+    [Authorize]
+    [HttpDelete("delete-directory/{id}")]
+    public async Task<IActionResult> DeleteDirectory(int id)
+    {
+        try
+        {
+            var userId =
+                User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? throw new UnauthorizedAccessException("User Id cannot be null.");
+
+            await _directoryService.DeleteDirectoryAsync(id, userId);
+
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new ApiError(ex.Message));
+        }
+        catch (NullReferenceException ex)
+        {
+            _logger.LogError(ex, "Error while trying to delete directory.");
+            return NotFound(new ApiError("User doesn't exist."));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogError(ex, "Error retrieving user id from claims");
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Server error.");
+            return StatusCode(500, new ApiError("Unexpected error."));
+        }
+    }
+
+
+    [Authorize]
+    [HttpDelete("delete-file/{id}")]
+    public async Task<IActionResult> DeleteFile(string id)
+    {
+        try
+        {
+            var userId =
+                User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? throw new UnauthorizedAccessException("User Id cannot be null.");
+
+            await _fileService.DeleteFileAsync(id, userId);
+
+            return NoContent();
+        }
+        catch (NullReferenceException)
+        {
+            return NotFound(new ApiError("User doesn't exist."));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogError(ex, "Error retrieving user id from claims");
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Server error.");
+            return StatusCode(500, new ApiError("Unexpected error."));
         }
     }
 }

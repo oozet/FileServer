@@ -51,7 +51,7 @@ public class TokenService : ITokenService
                     RefreshToken = refreshToken,
                     ExpiredAt = DateTime.UtcNow.AddDays(7),
                 };
-                await _tokenRepository.AddTokenAsync(ti);
+                await _tokenRepository.AddAsync(ti);
             }
             // Else, update the refresh token and expiration
             else
@@ -66,11 +66,7 @@ public class TokenService : ITokenService
         }
         catch (System.Exception ex)
         {
-            _logger.LogError(
-                ex,
-                "Error while creating refresh token for user: {Username}",
-                username
-            );
+            _logger.LogError(ex, "Error while creating refresh token.");
             return "";
         }
     }
@@ -88,7 +84,7 @@ public class TokenService : ITokenService
                 );
             }
 
-            await _tokenRepository.DeleteTokenAsync(username);
+            _tokenRepository.Remove(refreshToken);
 
             return true;
         }

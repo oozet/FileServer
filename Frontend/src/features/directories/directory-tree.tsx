@@ -4,11 +4,12 @@ import { TreeNode } from "./tree-builder";
 type DirectoryTreeProps = {
     nodes: TreeNode[];
     onFileClick: (file: TreeNode) => void;
+    onDeleteClick: (file: TreeNode) => void;
     activeDirectory: { name: string; id: number | string } | null;
     setActiveDirectory: (directory: { name: string, id: number | string } | null) => void
 };
 
-const DirectoryTree: React.FC<DirectoryTreeProps> = ({ nodes, onFileClick, activeDirectory, setActiveDirectory }) => {
+const DirectoryTree: React.FC<DirectoryTreeProps> = ({ nodes, onFileClick, onDeleteClick, activeDirectory, setActiveDirectory }) => {
     const [tree, setTree] = useState<TreeNode[]>(nodes);
 
     const onNodeClick = (node: TreeNode) => {
@@ -36,7 +37,7 @@ const DirectoryTree: React.FC<DirectoryTreeProps> = ({ nodes, onFileClick, activ
                         {node.name}
                         {node.type === "file" ? "💾" : ""}
                     </span>
-                    {node.type === "directory" && (
+                    {node.type === "directory" && (<>
                         <span
                             onClick={() => {
                                 //onClick={(event) => {
@@ -54,11 +55,14 @@ const DirectoryTree: React.FC<DirectoryTreeProps> = ({ nodes, onFileClick, activ
                         >
                             {activeDirectory?.name === node.name ? "☑" : "☐"} {/* Symbol ☐☑ Replace with a relevant icon (e.g., folder icon for uploads) */}
                         </span>
+                    </>
                     )}
+                    {node.type === "file" && (<span onClick={() => { onDeleteClick(node) }} style={{ cursor: "pointer" }} >🗑️</span>)}
                     {!node.collapsed && node.children && (
                         <DirectoryTree
                             nodes={node.children}
                             onFileClick={onFileClick}
+                            onDeleteClick={onDeleteClick}
                             activeDirectory={activeDirectory}
                             setActiveDirectory={setActiveDirectory}
                         />

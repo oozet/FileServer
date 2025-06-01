@@ -145,18 +145,14 @@ public class UserService : IUserService
 
     public async Task<bool> ResetPasswordAsync(ResetPasswordDto model)
     {
-        var user = await _userManager.FindByEmailAsync(model.Email);
-        if (user == null)
-        {
-            throw new NullReferenceException("User does not exist.");
-        }
+        var user = await _userManager.FindByEmailAsync(model.Email) ?? throw new NotFoundException("User does not exist.");
 
         // Reset the password using the provided token
         var result = await _userManager.ResetPasswordAsync(user, model.Token, model.NewPassword);
 
         if (!result.Succeeded)
         {
-            throw new Exception("Unable to reset password");
+            throw new Exception();
         }
 
         return true;

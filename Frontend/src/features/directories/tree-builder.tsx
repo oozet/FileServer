@@ -139,6 +139,33 @@ const TreeBuilder: React.FC<TreeBuilderProps> = ({ activeDirectory, setActiveDir
         }
     };
 
+    const deleteDirectory = async () => {
+        if (!activeDirectory?.id) {
+            alert("Need to select a directory first.");
+            return;
+        }
+
+        try {
+            const response = await authFetch(`http://localhost:5264/storage/delete-directory/${activeDirectory.id}`, {
+                method: "DELETE",
+            });
+
+            if (!response.ok) {
+                let errorMessage = "Unknown error";
+                try {
+                    const data = await response.json();
+                    errorMessage = data.message || errorMessage;
+                } catch (jsonError) {
+                    console.error("Error parsing API response:", jsonError);
+                }
+                throw new Error(errorMessage);
+            }
+            await fetchStorageTree();
+        } catch (error) {
+            console.error("Error deleting file:", error);
+        }
+    };
+
     const downloadFile = async (file: TreeNode) => {
         try {
             const response = await authFetch(`http://localhost:5264/storage/download/${file.id}`, {
@@ -163,44 +190,26 @@ const TreeBuilder: React.FC<TreeBuilderProps> = ({ activeDirectory, setActiveDir
         }
     };
 
-    // const downloadFile = async (file: TreeNode) => {
-    //     try {
-    //         const response = await fetch(`http://localhost:5264/storage/download/${file.id}`, {
-    //             method: "GET",
-    //             credentials: "include", // Include cookies for authentication
-    //             headers: {
-    //                 Authorization: "Bearer ${accessToken}"
-    //             },
-    //         });
+    const deleteFile = async (file: TreeNode) => {
+        try {
+            const response = await authFetch(`http://localhost:5264/storage/delete-file/${file.id}`, {
+                method: "DELETE",
+            });
 
-    //         if (response.status === 401) {
-    //             tokenLogin();
-    //             downloadFile(file);
-    //         }
-
-    //         if (!response.ok) {
-    //             throw new Error("Failed to download file");
-    //         }
-
-    //         const blob = await response.blob();
-    //         const url = window.URL.createObjectURL(blob);
-
-    //         const link = document.createElement("a");
-    //         link.href = url;
-    //         link.download = file.name;
-    //         link.click();
-
-    //         window.URL.revokeObjectURL(url);
-    //     } catch (error) {
-    //         console.error("Error downloading file:", error);
-    //     }
-    // };
+            if (!response.ok) {
+                throw new Error("Failed to fetch file.");
+            }
+            await fetchStorageTree();
+        } catch (error) {
+            console.error("Error deleting file:", error);
+        }
+    };
 
     return (<>
-        <DirectoryTree nodes={tree} onFileClick={downloadFile} activeDirectory={activeDirectory} setActiveDirectory={setActiveDirectory} />
+        <DirectoryTree nodes={tree} onFileClick={downloadFile} onDeleteClick={deleteFile} activeDirectory={activeDirectory} setActiveDirectory={setActiveDirectory} />
         <label htmlFor="directoryName">New directory name:</label>
         <input name="directoryName" value={newDirectoryName ?? ""} onChange={(e) => setNewDirectoryName(e.target.value)} />
-        <button onClick={createDirectory}>Create Directory</button>
+        <button onClick={createDirectory}>Create Directory</button> - <button onClick={deleteDirectory}>Delete Directory</button>
     </>);
 };
 

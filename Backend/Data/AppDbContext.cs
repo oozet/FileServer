@@ -35,6 +35,13 @@ public class AppDbContext : IdentityDbContext<AppUser>
                     }
                 );
 
+            builder.Entity<DirectoryEntity>()
+            .HasMany(d => d.ChildDirectories)
+            .WithOne()
+            .HasForeignKey(d => d.ParentDirectoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+
             base.OnModelCreating(builder);
 
             // Change names to snake_case for postgresql

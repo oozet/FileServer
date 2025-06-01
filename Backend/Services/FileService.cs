@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 public interface IFileService
 {
     Task SaveFileAsync(FileEntity fileEntity);
+    Task DeleteFileAsync(string id, string userId);
     Task<List<FileInformationDto>> GetFilesByUserIdAsync(string userId);
     Task<FileEntity> GetFileAsync(string userId, string fileId);
     Task<Dictionary<FileEntity, string>> GetAllFiles();
@@ -68,7 +69,7 @@ public class FileService : IFileService
         try
         {
             var dir =
-                await _directoryRepository.GetByIdAsync(fileEntity.DirectoryId)
+                await _directoryRepository.GetAsync(fileEntity.DirectoryId)
                 ?? throw new Exception("Directory not found.");
             dir.Files.Add(fileEntity);
             await _fileRepository.AddAsync(fileEntity);
@@ -77,5 +78,20 @@ public class FileService : IFileService
         {
             throw;
         }
+    }
+
+    public async Task DeleteFileAsync(string id, string userId)
+    {
+        var fileToDelete = await _fileRepository.GetAsync(id);
+        if (fileToDelete == null)
+        {
+            throw new NotFoundException("File not found.");
+        }
+        if (fileToDelete.UserId != userId)
+        {
+            throw new UnauthorizedAccessException("User id does not match file owner.");
+        }
+
+        _fileRepository.Remove(fileToDelete);
     }
 }

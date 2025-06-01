@@ -11,6 +11,7 @@ public class DirectoryEntity
     public int? ParentDirectoryId { get; set; } = null;
 
     public ICollection<FileEntity> Files { get; set; } = [];
+    public ICollection<DirectoryEntity> ChildDirectories { get; set; } = [];
 
     [ForeignKey(nameof(User))]
     public required string UserId { get; set; }

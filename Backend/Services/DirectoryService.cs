@@ -17,6 +17,7 @@ public interface IDirectoryService
     Task<List<DirectoryEntity>> GetDirectoriesByUserIdAsync(string userId);
     Task<DirectoryEntity> CreateRootAsync(string userId);
     Task<DirectoryEntity> CreateDirectoryAsync(CreateDirectoryRequest request, string userId);
+    Task DeleteDirectoryAsync(int id, string userId);
 }
 
 public class DirectoryService : IDirectoryService
@@ -87,5 +88,21 @@ public class DirectoryService : IDirectoryService
 
         await _directoryRepository.AddAsync(directory);
         return directory;
+    }
+
+    public async Task DeleteDirectoryAsync(int id, string userId)
+    {
+        var directory = await _directoryRepository.GetWithRelationsAsync(id) ?? throw new NotFoundException($"No directory with id: {id} found.");
+
+        if (directory.UserId != userId)
+        {
+            throw new UnauthorizedAccessException($"User {userId} tried to delete directory {id}");
+        }
+        if (directory.Files.Count > 0 || directory.ChildDirectories.Count > 0)
+        {
+            throw new InvalidOperationException("Cannot delete a non empty directory.");
+        }
+
+        _directoryRepository.Remove(directory);
     }
 }

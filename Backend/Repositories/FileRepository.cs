@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 
-public interface IFileRepository
+public interface IFileRepository : IRepository<FileEntity>
 {
-    public Task AddAsync(FileEntity fileEntity);
-    public Task<FileEntity?> GetAsync(string fileId);
+    public new Task AddAsync(FileEntity fileEntity);
+    // public Task<FileEntity?> GetAsync(string fileId);
     public Task<List<FileEntity>> GetFilesByUserIdAsync(string userId);
 }
 
@@ -35,10 +35,10 @@ public class FileRepository : Repository<FileEntity>, IFileRepository
         }
     }
 
-    public async Task<FileEntity?> GetAsync(string fileId)
-    {
-        return await _context.Files.FirstOrDefaultAsync(file => file.Id == fileId);
-    }
+    // public async Task<FileEntity?> GetAsync(string fileId)
+    // {
+    //     return await _context.Files.FirstOrDefaultAsync(file => file.Id == fileId);
+    // }
 
     public async Task<List<FileEntity>> GetFilesByUserIdAsync(string userId)
     {
