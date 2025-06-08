@@ -1,11 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 
 public interface IUserService
 {
@@ -21,20 +16,14 @@ public interface IUserService
 public class UserService : IUserService
 {
     private readonly UserManager<AppUser> _userManager;
-    private readonly SignInManager<AppUser> _signInManager;
-    private readonly ITokenService _tokenService;
     private readonly ILogger<AuthController> _logger;
 
     public UserService(
         UserManager<AppUser> userManager,
-        SignInManager<AppUser> signInManager,
-        ITokenService tokenService,
         ILogger<AuthController> logger
     )
     {
         _userManager = userManager;
-        _signInManager = signInManager;
-        _tokenService = tokenService;
         _logger = logger;
     }
 

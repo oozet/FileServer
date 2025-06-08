@@ -6,10 +6,6 @@ public interface IRepository<T>
     Task AddAsync(T entity);
     Task UpdateAsync(T entity);
     void Remove(T entity);
-    // Task<IDbContextTransaction> BeginTransactionAsync();
-    // Task CommitTransactionAsync();
-    // Task RollbackTransactionAsync();
-    // Task SaveChangesAsync();
     Task<T?> GetAsync<TKey>(TKey key) where TKey : notnull;
     Task<T?> GetByNameAsync(string name);
 }
@@ -23,21 +19,6 @@ public class Repository<T> : IRepository<T>
     {
         _context = context;
     }
-
-    // public async Task<IDbContextTransaction> BeginTransactionAsync()
-    // {
-    //     return await _context.Database.BeginTransactionAsync();
-    // }
-
-    // // public async Task CommitTransactionAsync()
-    // // {
-    // //     await _context.Database.CommitTransactionAsync();
-    // // }
-
-    // // public async Task RollbackTransactionAsync()
-    // // {
-    // //     await _context.Database.RollbackTransactionAsync();
-    // // }
 
     public async Task AddAsync(T entity)
     {
@@ -67,9 +48,4 @@ public class Repository<T> : IRepository<T>
     {
         return await _context.Set<T>().FindAsync(name);
     }
-
-    // public async Task SaveChangesAsync()
-    // {
-    //     await _context.SaveChangesAsync();
-    // }
 }

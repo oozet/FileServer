@@ -2,11 +2,9 @@ using Microsoft.EntityFrameworkCore;
 
 public interface ITokenRepository : IRepository<TokenInfo>
 {
-    // Task AddTokenAsync(TokenInfo entity);
     Task UpdateTokenAsync(TokenInfo tokenInfo);
     Task<TokenInfo?> GetTokenByUsernameAsync(string username);
     Task<TokenInfo?> GetTokenInfoAsync(string refreshToken);
-    // Task DeleteTokenAsync(string username);
 }
 
 public class TokenRepository : Repository<TokenInfo>, ITokenRepository
@@ -14,12 +12,6 @@ public class TokenRepository : Repository<TokenInfo>, ITokenRepository
     public TokenRepository(AppDbContext context) : base(context)
     {
     }
-
-    // public async Task AddTokenAsync(TokenInfo entity)
-    // {
-    //     await _context.TokenStore.AddAsync(entity);
-    //     await _context.SaveChangesAsync();
-    // }
 
     public async Task UpdateTokenAsync(TokenInfo tokenInfo)
     {
@@ -42,14 +34,4 @@ public class TokenRepository : Repository<TokenInfo>, ITokenRepository
     {
         return await _context.TokenStore.FirstOrDefaultAsync(t => t.RefreshToken == refreshToken);
     }
-
-    // public async Task DeleteTokenAsync(string username)
-    // {
-    //     var token = await GetTokenByUsernameAsync(username);
-    //     if (token != null)
-    //     {
-    //         _context.TokenStore.Remove(token);
-    //         await _context.SaveChangesAsync();
-    //     }
-    // }
 }

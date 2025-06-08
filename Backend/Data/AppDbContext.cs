@@ -8,8 +8,6 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public AppDbContext(DbContextOptions<AppDbContext> options)
         : base(options) { }
 
-    //public DbSet<AppUser> Users => Set<AppUser>();
-
     public DbSet<TokenInfo> TokenStore { get; set; }
     public DbSet<FileEntity> Files { get; set; }
     public DbSet<DirectoryEntity> Directories { get; set; }
