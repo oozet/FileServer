@@ -162,7 +162,7 @@ const TreeBuilder: React.FC<TreeBuilderProps> = ({ activeDirectory, setActiveDir
             }
             await fetchStorageTree();
         } catch (error) {
-            console.error("Error deleting file:", error);
+            console.error("Error deleting directory:", error);
         }
     };
 
