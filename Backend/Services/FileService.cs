@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.EntityFrameworkCore;
-
 public interface IFileService
 {
     Task SaveFileAsync(FileEntity fileEntity);
@@ -14,17 +11,14 @@ public class FileService : IFileService
 {
     private readonly IFileRepository _fileRepository;
     private readonly IDirectoryRepository _directoryRepository;
-    private readonly ILogger<AuthController> _logger;
 
     public FileService(
         IFileRepository fileRepository,
-        IDirectoryRepository directoryRepository,
-        ILogger<AuthController> logger
+        IDirectoryRepository directoryRepository
     )
     {
         _fileRepository = fileRepository;
         _directoryRepository = directoryRepository;
-        _logger = logger;
     }
 
     public Task<Dictionary<FileEntity, string>> GetAllFiles()
@@ -36,7 +30,7 @@ public class FileService : IFileService
     {
         var file =
             await _fileRepository.GetAsync(fileId)
-            ?? throw new NullReferenceException("File not found.");
+            ?? throw new NotFoundException("File not found.");
         if (file.UserId != userId)
             throw new UnauthorizedAccessException(
                 "Attempted to access a file belongin to other user."
@@ -66,18 +60,11 @@ public class FileService : IFileService
 
     public async Task SaveFileAsync(FileEntity fileEntity)
     {
-        try
-        {
-            var dir =
-                await _directoryRepository.GetAsync(fileEntity.DirectoryId)
-                ?? throw new Exception("Directory not found.");
-            dir.Files.Add(fileEntity);
-            await _fileRepository.AddAsync(fileEntity);
-        }
-        catch
-        {
-            throw;
-        }
+        var dir =
+            await _directoryRepository.GetAsync(fileEntity.DirectoryId)
+            ?? throw new NotFoundException("Directory not found.");
+        dir.Files.Add(fileEntity);
+        await _fileRepository.AddAsync(fileEntity);
     }
 
     public async Task DeleteFileAsync(string id, string userId)

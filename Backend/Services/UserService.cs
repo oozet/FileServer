@@ -65,17 +65,17 @@ public class UserService : IUserService
         }
     }
 
+    // Last minute change to not allow email login because multiple users can have the same email.
     public async Task<AppUser> ValidateUserAsync(LoginDto model)
     {
         try
         {
             // Try to login in user
             var user =
-                await _userManager.FindByNameAsync(model.UserName)
-                ?? await _userManager.FindByEmailAsync(model.UserName);
+                await _userManager.FindByNameAsync(model.UserName);
             if (user == null)
             {
-                throw new NullReferenceException();
+                throw new NotFoundException("User not found in database.");
             }
             bool isValidPassword = await _userManager.CheckPasswordAsync(user, model.Password);
             if (isValidPassword == false)
@@ -123,7 +123,7 @@ public class UserService : IUserService
                 (
                     await _userManager.FindByNameAsync(userName)
                     ?? await _userManager.FindByEmailAsync(userName)
-                ) ?? throw new NullReferenceException();
+                ) ?? throw new UnauthorizedAccessException("");
 
             return user;
         }
@@ -138,7 +138,7 @@ public class UserService : IUserService
     {
         var user =
             await _userManager.FindByEmailAsync(email)
-            ?? throw new NullReferenceException("No user connected to that email.");
+            ?? throw new NotFoundException("No user connected to that email.");
 
         return await _userManager.GeneratePasswordResetTokenAsync(user);
     }

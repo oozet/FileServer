@@ -2,8 +2,6 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 public interface ITokenService
@@ -64,7 +62,7 @@ public class TokenService : ITokenService
 
             return refreshToken;
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             _logger.LogError(ex, "Error while creating refresh token.");
             return "";
@@ -78,10 +76,7 @@ public class TokenService : ITokenService
             var refreshToken = await _tokenRepository.GetTokenByUsernameAsync(username);
             if (refreshToken == null)
             {
-                throw new ArgumentNullException(
-                    nameof(username),
-                    "Token with that username missing from database."
-                );
+                throw new NotFoundException($"Token for {username} missing from database.");
             }
 
             _tokenRepository.Remove(refreshToken);
@@ -91,7 +86,7 @@ public class TokenService : ITokenService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unable to revoke refresh token for user: {Username}", username);
-            return false;
+            throw;
         }
     }
 

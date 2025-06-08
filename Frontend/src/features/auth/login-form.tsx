@@ -16,7 +16,7 @@ const LoginForm: React.FC = () => {
         <div style={{ maxWidth: "400px", margin: "0 auto" }}>
             <h2>Login</h2>
             <form onSubmit={handleSubmit}>
-                <label htmlFor="username">Username or Email</label>
+                <label htmlFor="username">Username</label>
                 <input
                     id="username"
                     type="text"

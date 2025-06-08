@@ -1,10 +1,6 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 
 [ApiController]
 [Route("auth")]
@@ -253,6 +249,10 @@ public class AuthController : ControllerBase
             }
             Response.Cookies.Delete("refreshToken");
             return NoContent();
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new ApiError(ex.Message));
         }
         catch (Exception ex)
         {

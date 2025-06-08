@@ -1,13 +1,6 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Net.Mime;
 using System.Security.Claims;
-using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 
 [ApiController]
 [Route("storage")]
@@ -44,7 +37,7 @@ public class StorageController : ControllerBase
 
             if (!files.Any())
             {
-                return BadRequest("No file uploaded.");
+                return BadRequest(new ApiError("No file uploaded."));
             }
 
             var savingErrors = new List<string>();
@@ -76,24 +69,24 @@ public class StorageController : ControllerBase
 
             if (savingErrors.Count == 0)
             {
-                return Ok("File upload was successful!");
+                return Ok();
             }
             if (savingErrors.Count == files.Count())
             {
-                return BadRequest("Unable to save files.");
+                return BadRequest(new ApiError("Unable to save files."));
             }
             string failedFiles = string.Join(", ", savingErrors);
-            return StatusCode(207, $"Unable to save some files: {failedFiles}");
+            return StatusCode(207, new ApiError($"Unable to save some files: {failedFiles}"));
         }
         catch (UnauthorizedAccessException ex)
         {
             _logger.LogError(ex, "Error retrieving user id from claims");
-            return Unauthorized();
+            return Unauthorized(new ApiError("Invalid user."));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Server error");
-            return StatusCode(500, "Unexpected error.");
+            _logger.LogError(ex, "Server error in UploadFiles");
+            return StatusCode(500, new ApiError("Unexpected server error."));
         }
     }
 
@@ -111,18 +104,17 @@ public class StorageController : ControllerBase
                 await _directoryService.CreateDirectoryAsync(request, userId)
                 ?? throw new NullReferenceException();
 
-            Console.WriteLine("Tried to create dir:" + directory.Name);
-
             return Ok();
         }
         catch (UnauthorizedAccessException ex)
         {
             _logger.LogError(ex, "Error retrieving user id from claims");
-            return Unauthorized();
+            return Unauthorized(new ApiError("Invalid user."));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return BadRequest("Unable to create directory");
+            _logger.LogError(ex, "Unexpected error while creating directory.");
+            return BadRequest(new ApiError("Unable to create directory"));
         }
     }
 
@@ -158,9 +150,9 @@ public class StorageController : ControllerBase
                 id,
                 User?.Identity?.Name ?? "Unknown user"
             );
-            return Unauthorized();
+            return Unauthorized(new ApiError("Invalid user."));
         }
-        catch (NullReferenceException ex)
+        catch (NotFoundException ex)
         {
             _logger.LogError(
                 ex,
@@ -168,12 +160,12 @@ public class StorageController : ControllerBase
                 id,
                 User?.Identity?.Name ?? "Unknown user"
             );
-            return NotFound();
+            return NotFound(new ApiError(ex.Message));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Server error.");
-            return StatusCode(500, "Unexpected error.");
+            return StatusCode(500, new ApiError("Unexpected server error."));
         }
     }
 
@@ -222,19 +214,19 @@ public class StorageController : ControllerBase
 
             return Ok(new { directories, files });
         }
-        catch (NullReferenceException)
+        catch (NotFoundException ex)
         {
-            return NotFound("User doesn't exist.");
+            return NotFound(new ApiError(ex.Message));
         }
         catch (UnauthorizedAccessException ex)
         {
             _logger.LogError(ex, "Error retrieving user id from claims");
-            return Unauthorized();
+            return Unauthorized(new ApiError("Invalid user."));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Server error.");
-            return StatusCode(500, "Unexpected error.");
+            return StatusCode(500, new ApiError("Unexpected error."));
         }
     }
 
@@ -252,19 +244,19 @@ public class StorageController : ControllerBase
 
             return NoContent();
         }
-        catch (InvalidOperationException ex)
+        catch (NotAllowedException ex)
         {
             return BadRequest(new ApiError(ex.Message));
         }
-        catch (NullReferenceException ex)
+        catch (NotFoundException ex)
         {
             _logger.LogError(ex, "Error while trying to delete directory.");
-            return NotFound(new ApiError("User doesn't exist."));
+            return NotFound(new ApiError(ex.Message));
         }
         catch (UnauthorizedAccessException ex)
         {
             _logger.LogError(ex, "Error retrieving user id from claims");
-            return Forbid();
+            return Unauthorized(new ApiError("Invalid user"));
         }
         catch (Exception ex)
         {
@@ -288,14 +280,15 @@ public class StorageController : ControllerBase
 
             return NoContent();
         }
-        catch (NullReferenceException)
+        catch (NotFoundException ex)
         {
-            return NotFound(new ApiError("User doesn't exist."));
+            _logger.LogError(ex, "Error while trying to delete file with id: " + id);
+            return NotFound(new ApiError(ex.Message));
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogError(ex, "Error retrieving user id from claims");
-            return Forbid();
+            _logger.LogError(ex, "Error retrieving user id from claims for id: " + id);
+            return Unauthorized(new ApiError("Invalid user."));
         }
         catch (Exception ex)
         {

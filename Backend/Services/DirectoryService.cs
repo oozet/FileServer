@@ -1,12 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-
 public interface IDirectoryService
 {
     Task<DirectoryEntity> GetOrCreateDirectoryAsync(
@@ -23,15 +14,12 @@ public interface IDirectoryService
 public class DirectoryService : IDirectoryService
 {
     private readonly IDirectoryRepository _directoryRepository;
-    private readonly ILogger<AuthController> _logger;
 
     public DirectoryService(
-        IDirectoryRepository directoryRepository,
-        ILogger<AuthController> logger
+        IDirectoryRepository directoryRepository
     )
     {
         _directoryRepository = directoryRepository;
-        _logger = logger;
     }
 
     public async Task<DirectoryEntity> GetOrCreateDirectoryAsync(
@@ -98,9 +86,13 @@ public class DirectoryService : IDirectoryService
         {
             throw new UnauthorizedAccessException($"User {userId} tried to delete directory {id}");
         }
+        if (directory.ParentDirectoryId == null)
+        {
+            throw new NotAllowedException("Cannot delete root.");
+        }
         if (directory.Files.Count > 0 || directory.ChildDirectories.Count > 0)
         {
-            throw new InvalidOperationException("Cannot delete a non empty directory.");
+            throw new NotAllowedException("Cannot delete a non empty directory.");
         }
 
         _directoryRepository.Remove(directory);
